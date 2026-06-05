@@ -1,42 +1,48 @@
-# AEF — Digital Marketing Dashboard
+# AEF — Digital Campaign Dashboard
 
-A lightweight dashboard for reporting your digital campaign numbers. Update
-metrics manually or upload an Excel/CSV file, and see everything visualized
-on a dashboard. No backend, no build step, no accounts — it's a single static
-site and your data is stored in your browser.
+A lightweight dashboard for reporting your digital marketing numbers. Update
+metrics by hand or upload an Excel/CSV export, and see everything visualized on
+a branded dashboard. No backend, no build step, no accounts — it's a single
+static site and your data is stored in your browser.
+
+Styled to match the Amazing Kids platform brand: Satoshi typeface, teal/cream
+palette, soft "panel" cards, pill controls, and light **and** dark themes.
 
 ## Features
 
-- **Dashboard view** — KPI cards (Spend, Revenue, Impressions, Conversions) plus
-  charts: spend vs. revenue trend, spend by channel, conversions by channel, and
-  top campaigns by ROAS.
+- **Hero + KPI overview** — Total Spend, Revenue, ROAS, Conversions (with CPA),
+  and CTR (with clicks).
+- **Charts** — Spend vs. revenue over time (with month-over-month badge), spend
+  by channel, conversions & CTR by month, and top campaigns by ROAS.
 - **Manual entry** — Add, edit, and delete campaign records with a simple form.
-- **Excel / CSV import** — Drag & drop a spreadsheet. Columns are matched by
-  name (case-insensitive), so column order doesn't matter. Common header
-  spellings (e.g. `Cost` → Spend, `Platform` → Channel) are recognized.
-- **Filters** — By channel and by month.
-- **Export & backup** — Download a CSV of all records (with calculated CTR, CPC,
-  CPA, ROAS) or a JSON backup you can restore later.
+- **Excel / CSV import** — Upload one or more files. Columns are matched by name
+  (case-insensitive), so order doesn't matter, and common variants are
+  recognized (e.g. `Cost` → Spend, `Platform` → Channel, `Amount spent` → Spend).
+- **Filters** — Search, plus filter by channel and by month.
+- **Export** — Download a CSV of all records with calculated CTR, CPC, CPA, ROAS.
+- **Light / dark theme** — Respects your system preference; toggle with ◐.
 - **Auto-calculated metrics** — CTR, CPC, CPA, and ROAS are derived for you.
 
-## Run it
+## Run it locally
 
-It's just static files. Either:
+It's just static files:
 
-- **Open directly:** double-click `index.html`, **or**
-- **Serve locally** (recommended so file drag/drop and fonts work smoothly):
+```bash
+python3 -m http.server 8000
+# then open http://localhost:8000
+```
 
-  ```bash
-  python3 -m http.server 8000
-  # then open http://localhost:8000
-  ```
+(Opening `index.html` directly works too.)
 
-## Deploy free on GitHub Pages
+## Hosting (GitHub Pages)
 
-1. Push this repo to GitHub.
-2. Repo **Settings → Pages → Build and deployment → Source: Deploy from a branch**.
-3. Pick your branch and `/ (root)`, then save. Your dashboard will be live at
-   `https://<user>.github.io/<repo>/`.
+This repo ships a workflow at `.github/workflows/deploy-pages.yml` that
+publishes the site to GitHub Pages automatically. It enables Pages on first run
+and deploys on every push to `main`. Once deployed, the site is available at:
+
+```
+https://bernardteamcerium.github.io/aef-reporting-dashboard/
+```
 
 ## Spreadsheet format
 
@@ -46,17 +52,17 @@ case-insensitive):
 | Date | Campaign | Channel | Impressions | Clicks | Spend | Conversions | Revenue |
 |------|----------|---------|-------------|--------|-------|-------------|---------|
 
-`CTR`, `CPC`, `CPA`, and `ROAS` are calculated automatically and don't need to
-be in your file.
+`CTR`, `CPC`, `CPA`, and `ROAS` are calculated automatically.
 
 ## Where is my data stored?
 
-In your browser's `localStorage` under the key `aef_marketing_campaigns_v1`.
-That means data stays on the machine/browser you entered it on. To move it to
-another machine or share it, use **Export JSON (backup)** and **Restore JSON
-backup** on the Import / Export tab.
+In your browser's `localStorage` under the key `aef_marketing_campaigns_v2`.
+Data stays on the machine/browser you entered it on. To move or share it, use
+**Export CSV**. (If you need multiple people to see the *same* live numbers,
+that needs a shared backend or data source — happy to add one.)
 
 ## Tech
 
 Plain HTML/CSS/JS. Charts via [Chart.js](https://www.chartjs.org/), spreadsheet
-parsing via [SheetJS](https://sheetjs.com/), both loaded from a CDN.
+parsing via [SheetJS](https://sheetjs.com/), Satoshi via
+[Fontshare](https://www.fontshare.com/). All loaded from a CDN.

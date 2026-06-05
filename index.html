@@ -1,246 +1,169 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AEF — Digital Marketing Dashboard</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <title>AEF — Digital Campaign Dashboard</title>
+  <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
+  <a href="#main" style="position:absolute;left:-9999px;top:auto;">Skip to content</a>
   <div class="app">
-    <!-- Sidebar -->
-    <aside class="sidebar">
+    <header class="topbar">
       <div class="brand">
-        <div class="brand-mark">AEF</div>
-        <div class="brand-text">
-          <strong>Marketing</strong>
-          <span>Campaign Reporting</span>
+        <div class="logo" aria-label="AEF Digital Campaign Dashboard logo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 3v18h18"/><path d="M7 15l3.5-4 3 3L20 7"/><path d="M20 11V7h-4"/>
+          </svg>
         </div>
-      </div>
-
-      <nav class="nav">
-        <button class="nav-item active" data-view="dashboard">
-          <span class="nav-ico">▦</span> Dashboard
-        </button>
-        <button class="nav-item" data-view="campaigns">
-          <span class="nav-ico">≣</span> Campaigns
-        </button>
-        <button class="nav-item" data-view="import">
-          <span class="nav-ico">↥</span> Import / Export
-        </button>
-      </nav>
-
-      <div class="sidebar-foot">
-        <p class="muted small">Data is saved in your browser. Use Export to back it up or share.</p>
-      </div>
-    </aside>
-
-    <!-- Main -->
-    <main class="main">
-      <header class="topbar">
         <div>
-          <h1 id="viewTitle">Dashboard</h1>
-          <p class="muted" id="viewSubtitle">Overview of your digital marketing performance</p>
+          <h1>AEF Digital Campaign Dashboard</h1>
+          <div class="sub">Report marketing performance across your digital campaigns — spend, reach, conversions, and ROAS. Update numbers by hand or upload an Excel/CSV export.</div>
         </div>
-        <div class="topbar-actions">
-          <select id="channelFilter" class="select" title="Filter by channel">
-            <option value="">All channels</option>
-          </select>
-          <select id="periodFilter" class="select" title="Filter by month">
-            <option value="">All periods</option>
-          </select>
-          <button class="btn btn-primary" id="addBtn">+ Add campaign</button>
-        </div>
-      </header>
+      </div>
+      <div class="actions">
+        <button class="btn primary" id="addBtn">+ Add campaign</button>
+        <label class="upload-label" for="fileInput">Upload Excel / CSV</label>
+        <input id="fileInput" type="file" accept=".xlsx,.xls,.csv" multiple />
+        <button class="btn" id="templateBtn">Download template</button>
+        <button class="btn" id="exportBtn">Export CSV</button>
+        <button class="btn" id="loadSampleBtn">Load sample data</button>
+        <button class="btn" id="clearBtn">Clear data</button>
+        <button class="btn" id="themeBtn" aria-label="Toggle theme">◐</button>
+      </div>
+    </header>
 
-      <!-- ============ DASHBOARD VIEW ============ -->
-      <section class="view" id="view-dashboard">
-        <div class="kpi-grid" id="kpiGrid"><!-- KPI cards injected --></div>
-
-        <div class="chart-grid">
-          <div class="card chart-card">
-            <div class="card-head">
-              <h3>Spend vs. Revenue over time</h3>
-            </div>
-            <canvas id="trendChart" height="110"></canvas>
-          </div>
-          <div class="card chart-card">
-            <div class="card-head">
-              <h3>Spend by channel</h3>
-            </div>
-            <canvas id="channelChart" height="110"></canvas>
+    <main id="main">
+      <!-- Hero -->
+      <section class="hero">
+        <div class="panel hero-card">
+          <div class="eyebrow">Performance overview</div>
+          <h2>One view for spend, reach, and return across every channel.</h2>
+          <p>Enter campaign numbers manually or upload your ad-platform exports. The dashboard combines everything into running trends and updates instantly. Your data is saved right in this browser.</p>
+          <div class="mini-stats">
+            <div class="mini"><div class="label">Records loaded</div><div class="value" id="recordsLoaded">0</div></div>
+            <div class="mini"><div class="label">Channels</div><div class="value" id="channelsLoaded">0</div></div>
           </div>
         </div>
-
-        <div class="chart-grid">
-          <div class="card chart-card">
-            <div class="card-head">
-              <h3>Conversions by channel</h3>
-            </div>
-            <canvas id="convChart" height="90"></canvas>
-          </div>
-          <div class="card chart-card">
-            <div class="card-head">
-              <h3>Top campaigns by ROAS</h3>
-            </div>
-            <div class="mini-table" id="topRoas"></div>
-          </div>
+        <div class="panel upload-box">
+          <div class="eyebrow">Upload guidance</div>
+          <h3 style="margin:0 0 .5rem 0">Expected file format</h3>
+          <p style="margin:0;color:var(--color-text-muted)">Columns are matched by name (case-insensitive), so order doesn't matter. Common variants are recognized — e.g. <em>Cost</em> → Spend, <em>Platform</em> → Channel.</p>
+          <ul>
+            <li>Headers: Date, Campaign, Channel, Impressions, Clicks, Spend, Conversions, Revenue.</li>
+            <li>Upload one file or several at once; rows are appended.</li>
+            <li>CTR, CPC, CPA and ROAS are calculated for you.</li>
+          </ul>
+          <div class="footer-note" id="statusText">No campaign data loaded yet.</div>
         </div>
       </section>
 
-      <!-- ============ CAMPAIGNS VIEW ============ -->
-      <section class="view hidden" id="view-campaigns">
-        <div class="card">
-          <div class="card-head spread">
-            <h3>All campaign records</h3>
-            <div class="row-gap">
-              <input type="search" id="searchInput" class="select" placeholder="Search campaigns…" />
-              <button class="btn" id="emptyAddBtn">+ Add campaign</button>
-            </div>
+      <!-- KPIs -->
+      <section class="kpis" id="kpiGrid">
+        <div class="panel kpi"><div class="label">Total spend</div><div class="value" id="kpiSpend">$0</div><div class="note">Across selected data</div></div>
+        <div class="panel kpi"><div class="label">Revenue</div><div class="value" id="kpiRevenue">$0</div><div class="note">Attributed conversion value</div></div>
+        <div class="panel kpi"><div class="label">ROAS</div><div class="value" id="kpiRoas">0.00×</div><div class="note">Revenue ÷ spend</div></div>
+        <div class="panel kpi"><div class="label">Conversions</div><div class="value" id="kpiConversions">0</div><div class="note" id="kpiCpaNote">$0 cost per conversion</div></div>
+        <div class="panel kpi"><div class="label">Click-through rate</div><div class="value" id="kpiCtr">0.0%</div><div class="note" id="kpiClicksNote">0 clicks</div></div>
+      </section>
+
+      <!-- Charts row 1 -->
+      <section class="grid">
+        <div class="panel card">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:.5rem">
+            <h3>Spend vs. revenue over time</h3>
+            <span class="badge" id="revenueBadge">No data</span>
           </div>
-          <div class="table-wrap">
-            <table class="data-table" id="dataTable">
-              <thead>
-                <tr>
-                  <th data-sort="date">Date</th>
-                  <th data-sort="campaign">Campaign</th>
-                  <th data-sort="channel">Channel</th>
-                  <th class="num" data-sort="impressions">Impressions</th>
-                  <th class="num" data-sort="clicks">Clicks</th>
-                  <th class="num" data-sort="ctr">CTR</th>
-                  <th class="num" data-sort="spend">Spend</th>
-                  <th class="num" data-sort="conversions">Conv.</th>
-                  <th class="num" data-sort="cpa">CPA</th>
-                  <th class="num" data-sort="revenue">Revenue</th>
-                  <th class="num" data-sort="roas">ROAS</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody id="tableBody"></tbody>
-            </table>
-            <div class="empty-state hidden" id="emptyState">
-              <p>No campaigns yet.</p>
-              <p class="muted">Add one manually or import an Excel/CSV file.</p>
-            </div>
-          </div>
+          <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
+        </div>
+        <div class="panel card">
+          <h3>Spend by channel</h3>
+          <div class="chart-wrap small-chart"><canvas id="channelChart"></canvas></div>
         </div>
       </section>
 
-      <!-- ============ IMPORT VIEW ============ -->
-      <section class="view hidden" id="view-import">
-        <div class="card">
-          <div class="card-head"><h3>Import from Excel / CSV</h3></div>
-          <p class="muted">
-            Upload a spreadsheet to load campaign numbers in bulk. Your file should have a header row.
-            Columns are matched by name (case-insensitive), so order doesn't matter.
-          </p>
-          <div class="dropzone" id="dropzone">
-            <div class="dropzone-inner">
-              <div class="dz-ico">↥</div>
-              <p><strong>Drop your .xlsx / .csv here</strong> or click to browse</p>
-              <p class="muted small">Recognized columns: Date, Campaign, Channel, Impressions, Clicks, Spend, Conversions, Revenue</p>
-            </div>
-            <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" hidden />
-          </div>
-          <div class="import-actions">
-            <button class="btn" id="templateBtn">↓ Download template (CSV)</button>
-            <label class="check">
-              <input type="checkbox" id="replaceToggle" /> Replace existing data instead of appending
-            </label>
-          </div>
-          <div id="importMsg" class="import-msg"></div>
+      <!-- Charts row 2 -->
+      <section class="grid">
+        <div class="panel card">
+          <h3>Conversions &amp; click-through rate by month</h3>
+          <div class="chart-wrap small-chart"><canvas id="convChart"></canvas></div>
         </div>
+        <div class="panel card">
+          <h3>Top campaigns by ROAS</h3>
+          <div class="chart-wrap small-chart"><canvas id="roasChart"></canvas></div>
+        </div>
+      </section>
 
-        <div class="card">
-          <div class="card-head"><h3>Export</h3></div>
-          <p class="muted">Download all current records, or back up everything to a JSON file you can re-import later.</p>
-          <div class="row-gap">
-            <button class="btn" id="exportCsvBtn">↓ Export CSV</button>
-            <button class="btn" id="exportJsonBtn">↓ Export JSON (backup)</button>
-            <label class="btn btn-file">
-              ↥ Restore JSON backup
-              <input type="file" id="restoreInput" accept=".json" hidden />
-            </label>
+      <!-- Records table -->
+      <section class="panel card" style="margin-bottom:var(--space-4)">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:1rem">
+          <h3 style="margin:0">Campaign records</h3>
+          <div class="filter-bar" style="margin:0">
+            <input type="search" id="searchInput" class="search" placeholder="Search campaigns…" />
+            <select id="channelFilter" class="select"><option value="">All channels</option></select>
+            <select id="periodFilter" class="select"><option value="">All months</option></select>
           </div>
         </div>
-
-        <div class="card danger-card">
-          <div class="card-head"><h3>Reset</h3></div>
-          <p class="muted">Remove all campaign data from this browser. This can't be undone (export a backup first).</p>
-          <button class="btn btn-danger" id="clearBtn">Clear all data</button>
+        <div class="table-wrap">
+          <table class="data-table" id="dataTable">
+            <thead>
+              <tr>
+                <th data-sort="date">Date</th>
+                <th data-sort="campaign">Campaign</th>
+                <th data-sort="channel">Channel</th>
+                <th class="num" data-sort="impressions">Impressions</th>
+                <th class="num" data-sort="clicks">Clicks</th>
+                <th class="num" data-sort="ctr">CTR</th>
+                <th class="num" data-sort="spend">Spend</th>
+                <th class="num" data-sort="conversions">Conv.</th>
+                <th class="num" data-sort="cpa">CPA</th>
+                <th class="num" data-sort="revenue">Revenue</th>
+                <th class="num" data-sort="roas">ROAS</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
         </div>
       </section>
     </main>
   </div>
 
-  <!-- ============ ADD / EDIT MODAL ============ -->
+  <!-- Add / edit modal -->
   <div class="modal-backdrop hidden" id="modalBackdrop">
     <div class="modal">
       <div class="modal-head">
         <h3 id="modalTitle">Add campaign</h3>
-        <button class="icon-btn" id="modalClose">✕</button>
+        <button class="icon-btn" id="modalClose" aria-label="Close">✕</button>
       </div>
       <form id="campaignForm" class="form-grid">
         <input type="hidden" id="f_id" />
-        <label class="field">
-          <span>Date</span>
-          <input type="date" id="f_date" required />
-        </label>
-        <label class="field">
-          <span>Campaign name</span>
-          <input type="text" id="f_campaign" placeholder="Spring Promo" required />
-        </label>
-        <label class="field">
-          <span>Channel</span>
+        <label class="field"><span>Date</span><input type="date" id="f_date" required /></label>
+        <label class="field"><span>Campaign name</span><input type="text" id="f_campaign" placeholder="Spring Promo" required /></label>
+        <label class="field"><span>Channel</span>
           <input type="text" id="f_channel" list="channelOptions" placeholder="Google Ads" required />
           <datalist id="channelOptions">
-            <option>Google Ads</option>
-            <option>Facebook</option>
-            <option>Instagram</option>
-            <option>LinkedIn</option>
-            <option>YouTube</option>
-            <option>TikTok</option>
-            <option>Email</option>
-            <option>Display</option>
+            <option>Google Ads</option><option>Facebook</option><option>Instagram</option><option>LinkedIn</option>
+            <option>YouTube</option><option>TikTok</option><option>Email</option><option>Display</option>
           </datalist>
         </label>
-        <label class="field">
-          <span>Impressions</span>
-          <input type="number" id="f_impressions" min="0" step="1" placeholder="0" />
-        </label>
-        <label class="field">
-          <span>Clicks</span>
-          <input type="number" id="f_clicks" min="0" step="1" placeholder="0" />
-        </label>
-        <label class="field">
-          <span>Spend ($)</span>
-          <input type="number" id="f_spend" min="0" step="0.01" placeholder="0.00" />
-        </label>
-        <label class="field">
-          <span>Conversions</span>
-          <input type="number" id="f_conversions" min="0" step="1" placeholder="0" />
-        </label>
-        <label class="field">
-          <span>Revenue ($)</span>
-          <input type="number" id="f_revenue" min="0" step="0.01" placeholder="0.00" />
-        </label>
+        <label class="field"><span>Impressions</span><input type="number" id="f_impressions" min="0" step="1" placeholder="0" /></label>
+        <label class="field"><span>Clicks</span><input type="number" id="f_clicks" min="0" step="1" placeholder="0" /></label>
+        <label class="field"><span>Spend ($)</span><input type="number" id="f_spend" min="0" step="0.01" placeholder="0.00" /></label>
+        <label class="field"><span>Conversions</span><input type="number" id="f_conversions" min="0" step="1" placeholder="0" /></label>
+        <label class="field"><span>Revenue ($)</span><input type="number" id="f_revenue" min="0" step="0.01" placeholder="0.00" /></label>
         <div class="form-foot">
           <button type="button" class="btn" id="cancelBtn">Cancel</button>
-          <button type="submit" class="btn btn-primary">Save campaign</button>
+          <button type="submit" class="btn primary">Save campaign</button>
         </div>
       </form>
     </div>
   </div>
 
   <div id="toast" class="toast hidden"></div>
-
-  <!-- Libraries -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <!-- App -->
   <script src="js/app.js"></script>
 </body>
 </html>
