@@ -167,7 +167,8 @@
 
   /* ------------------------------- Charts -------------------------------- */
   const cssVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-  const PALETTE = () => [cssVar("--color-primary"), cssVar("--color-blue"), cssVar("--color-orange"), cssVar("--color-purple"), cssVar("--color-success"), "#c2410c", "#0891b2", "#be185d"];
+  // Brand-aligned chart palette: mint -> teal -> blue -> indigo, plus tints.
+  const PALETTE = () => [cssVar("--color-success"), cssVar("--color-blue"), cssVar("--color-primary"), cssVar("--color-purple"), cssVar("--color-orange"), "#1AE6A0", "#16BEE6", "#1e2a78"];
 
   function destroyCharts() { Object.values(charts).forEach((c) => c && c.destroy()); charts = {}; }
 

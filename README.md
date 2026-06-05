@@ -5,8 +5,13 @@ numbers. Update metrics by hand or upload an Excel/CSV export, and see everythin
 visualized on a branded dashboard. No backend, no build step, no accounts — it's
 a single static site and your data is stored in your browser.
 
-Styled with the Allied Elite Financial brand system: Satoshi typeface, teal/cream
-palette, soft "panel" cards, pill controls, and light **and** dark themes.
+Styled with the Allied Elite Financial brand system: the mint→blue gradient mark,
+navy wordmark with the "An AmeriLife Company" tagline, Satoshi typeface, soft
+"panel" cards, pill controls, and light **and** dark themes.
+
+> The logo at `assets/logo.svg` is a faithful gradient recreation of the AE mark.
+> To use the exact official artwork, drop the official `.svg` (or `.png`) in at
+> `assets/logo.svg` — nothing else needs to change.
 
 ## Features
 
