@@ -37,8 +37,15 @@ python3 -m http.server 8000
 ## Hosting (GitHub Pages)
 
 This repo ships a workflow at `.github/workflows/deploy-pages.yml` that
-publishes the site to GitHub Pages automatically. It enables Pages on first run
-and deploys on every push to `main`. Once deployed, the site is available at:
+publishes the site to GitHub Pages.
+
+**One-time setup** (GitHub doesn't let the workflow enable Pages on its own):
+
+1. Repo **Settings → Pages → Build and deployment → Source: "GitHub Actions"**.
+2. Merge this branch into `main` (or click **Actions → Deploy to GitHub Pages →
+   Run workflow**).
+
+After that, every push to `main` redeploys automatically. The site will be at:
 
 ```
 https://bernardteamcerium.github.io/aef-reporting-dashboard/
