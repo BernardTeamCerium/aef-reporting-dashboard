@@ -1,11 +1,11 @@
-# AEF — Digital Campaign Dashboard
+# Allied Elite Financial — Digital Campaign Dashboard
 
-A lightweight dashboard for reporting your digital marketing numbers. Update
-metrics by hand or upload an Excel/CSV export, and see everything visualized on
-a branded dashboard. No backend, no build step, no accounts — it's a single
-static site and your data is stored in your browser.
+A lightweight dashboard for reporting Allied Elite Financial's digital marketing
+numbers. Update metrics by hand or upload an Excel/CSV export, and see everything
+visualized on a branded dashboard. No backend, no build step, no accounts — it's
+a single static site and your data is stored in your browser.
 
-Styled to match the Amazing Kids platform brand: Satoshi typeface, teal/cream
+Styled with the Allied Elite Financial brand system: Satoshi typeface, teal/cream
 palette, soft "panel" cards, pill controls, and light **and** dark themes.
 
 ## Features

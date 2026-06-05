@@ -1,5 +1,5 @@
 /* =========================================================================
-   AEF Digital Campaign Dashboard
+   Allied Elite Financial — Digital Campaign Dashboard
    Vanilla JS. Data persists in localStorage. No backend required.
    Brand: Satoshi + teal/cream palette, light & dark themes.
    ========================================================================= */
