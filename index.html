@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AEF — Digital Marketing Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <div class="app">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">AEF</div>
+        <div class="brand-text">
+          <strong>Marketing</strong>
+          <span>Campaign Reporting</span>
+        </div>
+      </div>
+
+      <nav class="nav">
+        <button class="nav-item active" data-view="dashboard">
+          <span class="nav-ico">▦</span> Dashboard
+        </button>
+        <button class="nav-item" data-view="campaigns">
+          <span class="nav-ico">≣</span> Campaigns
+        </button>
+        <button class="nav-item" data-view="import">
+          <span class="nav-ico">↥</span> Import / Export
+        </button>
+      </nav>
+
+      <div class="sidebar-foot">
+        <p class="muted small">Data is saved in your browser. Use Export to back it up or share.</p>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h1 id="viewTitle">Dashboard</h1>
+          <p class="muted" id="viewSubtitle">Overview of your digital marketing performance</p>
+        </div>
+        <div class="topbar-actions">
+          <select id="channelFilter" class="select" title="Filter by channel">
+            <option value="">All channels</option>
+          </select>
+          <select id="periodFilter" class="select" title="Filter by month">
+            <option value="">All periods</option>
+          </select>
+          <button class="btn btn-primary" id="addBtn">+ Add campaign</button>
+        </div>
+      </header>
+
+      <!-- ============ DASHBOARD VIEW ============ -->
+      <section class="view" id="view-dashboard">
+        <div class="kpi-grid" id="kpiGrid"><!-- KPI cards injected --></div>
+
+        <div class="chart-grid">
+          <div class="card chart-card">
+            <div class="card-head">
+              <h3>Spend vs. Revenue over time</h3>
+            </div>
+            <canvas id="trendChart" height="110"></canvas>
+          </div>
+          <div class="card chart-card">
+            <div class="card-head">
+              <h3>Spend by channel</h3>
+            </div>
+            <canvas id="channelChart" height="110"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-grid">
+          <div class="card chart-card">
+            <div class="card-head">
+              <h3>Conversions by channel</h3>
+            </div>
+            <canvas id="convChart" height="90"></canvas>
+          </div>
+          <div class="card chart-card">
+            <div class="card-head">
+              <h3>Top campaigns by ROAS</h3>
+            </div>
+            <div class="mini-table" id="topRoas"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ CAMPAIGNS VIEW ============ -->
+      <section class="view hidden" id="view-campaigns">
+        <div class="card">
+          <div class="card-head spread">
+            <h3>All campaign records</h3>
+            <div class="row-gap">
+              <input type="search" id="searchInput" class="select" placeholder="Search campaigns…" />
+              <button class="btn" id="emptyAddBtn">+ Add campaign</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table" id="dataTable">
+              <thead>
+                <tr>
+                  <th data-sort="date">Date</th>
+                  <th data-sort="campaign">Campaign</th>
+                  <th data-sort="channel">Channel</th>
+                  <th class="num" data-sort="impressions">Impressions</th>
+                  <th class="num" data-sort="clicks">Clicks</th>
+                  <th class="num" data-sort="ctr">CTR</th>
+                  <th class="num" data-sort="spend">Spend</th>
+                  <th class="num" data-sort="conversions">Conv.</th>
+                  <th class="num" data-sort="cpa">CPA</th>
+                  <th class="num" data-sort="revenue">Revenue</th>
+                  <th class="num" data-sort="roas">ROAS</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="tableBody"></tbody>
+            </table>
+            <div class="empty-state hidden" id="emptyState">
+              <p>No campaigns yet.</p>
+              <p class="muted">Add one manually or import an Excel/CSV file.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ IMPORT VIEW ============ -->
+      <section class="view hidden" id="view-import">
+        <div class="card">
+          <div class="card-head"><h3>Import from Excel / CSV</h3></div>
+          <p class="muted">
+            Upload a spreadsheet to load campaign numbers in bulk. Your file should have a header row.
+            Columns are matched by name (case-insensitive), so order doesn't matter.
+          </p>
+          <div class="dropzone" id="dropzone">
+            <div class="dropzone-inner">
+              <div class="dz-ico">↥</div>
+              <p><strong>Drop your .xlsx / .csv here</strong> or click to browse</p>
+              <p class="muted small">Recognized columns: Date, Campaign, Channel, Impressions, Clicks, Spend, Conversions, Revenue</p>
+            </div>
+            <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" hidden />
+          </div>
+          <div class="import-actions">
+            <button class="btn" id="templateBtn">↓ Download template (CSV)</button>
+            <label class="check">
+              <input type="checkbox" id="replaceToggle" /> Replace existing data instead of appending
+            </label>
+          </div>
+          <div id="importMsg" class="import-msg"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h3>Export</h3></div>
+          <p class="muted">Download all current records, or back up everything to a JSON file you can re-import later.</p>
+          <div class="row-gap">
+            <button class="btn" id="exportCsvBtn">↓ Export CSV</button>
+            <button class="btn" id="exportJsonBtn">↓ Export JSON (backup)</button>
+            <label class="btn btn-file">
+              ↥ Restore JSON backup
+              <input type="file" id="restoreInput" accept=".json" hidden />
+            </label>
+          </div>
+        </div>
+
+        <div class="card danger-card">
+          <div class="card-head"><h3>Reset</h3></div>
+          <p class="muted">Remove all campaign data from this browser. This can't be undone (export a backup first).</p>
+          <button class="btn btn-danger" id="clearBtn">Clear all data</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ============ ADD / EDIT MODAL ============ -->
+  <div class="modal-backdrop hidden" id="modalBackdrop">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 id="modalTitle">Add campaign</h3>
+        <button class="icon-btn" id="modalClose">✕</button>
+      </div>
+      <form id="campaignForm" class="form-grid">
+        <input type="hidden" id="f_id" />
+        <label class="field">
+          <span>Date</span>
+          <input type="date" id="f_date" required />
+        </label>
+        <label class="field">
+          <span>Campaign name</span>
+          <input type="text" id="f_campaign" placeholder="Spring Promo" required />
+        </label>
+        <label class="field">
+          <span>Channel</span>
+          <input type="text" id="f_channel" list="channelOptions" placeholder="Google Ads" required />
+          <datalist id="channelOptions">
+            <option>Google Ads</option>
+            <option>Facebook</option>
+            <option>Instagram</option>
+            <option>LinkedIn</option>
+            <option>YouTube</option>
+            <option>TikTok</option>
+            <option>Email</option>
+            <option>Display</option>
+          </datalist>
+        </label>
+        <label class="field">
+          <span>Impressions</span>
+          <input type="number" id="f_impressions" min="0" step="1" placeholder="0" />
+        </label>
+        <label class="field">
+          <span>Clicks</span>
+          <input type="number" id="f_clicks" min="0" step="1" placeholder="0" />
+        </label>
+        <label class="field">
+          <span>Spend ($)</span>
+          <input type="number" id="f_spend" min="0" step="0.01" placeholder="0.00" />
+        </label>
+        <label class="field">
+          <span>Conversions</span>
+          <input type="number" id="f_conversions" min="0" step="1" placeholder="0" />
+        </label>
+        <label class="field">
+          <span>Revenue ($)</span>
+          <input type="number" id="f_revenue" min="0" step="0.01" placeholder="0.00" />
+        </label>
+        <div class="form-foot">
+          <button type="button" class="btn" id="cancelBtn">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save campaign</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <!-- Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- App -->
+  <script src="js/app.js"></script>
+</body>
+</html>
