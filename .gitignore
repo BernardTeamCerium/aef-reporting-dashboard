@@ -2,6 +2,7 @@ node_modules
 dist
 dist-ssr
 *.tsbuildinfo
+vite.config.ts.timestamp-*.mjs
 *.local
 .DS_Store
 .vite
