@@ -100,9 +100,11 @@
 
     document.getElementById("recordsLoaded").textContent = num(state.records.length);
     document.getElementById("channelsLoaded").textContent = new Set(state.records.map((r) => r.channel).filter(Boolean)).size;
+    const monthsCount = new Set(state.records.map((r) => monthKey(r.date))).size;
+    const srcNote = sheetCfg.url ? ` · source: Google Sheet (synced ${timeAgo(sheetCfg.lastSynced) || "—"})` : "";
     document.getElementById("statusText").textContent = state.records.length
-      ? `${state.records.length} record(s) loaded across ${new Set(state.records.map((r) => monthKey(r.date))).size} month(s).`
-      : "No campaign data loaded yet.";
+      ? `${state.records.length} record(s) loaded across ${monthsCount} month(s)${srcNote}.`
+      : (sheetCfg.url ? "Connected to Google Sheet — syncing…" : "No campaign data loaded yet.");
 
     const tot = {
       impressions: sumf(rows, "impressions"), clicks: sumf(rows, "clicks"),
@@ -384,6 +386,105 @@
     URL.revokeObjectURL(a.href);
   }
 
+  /* --------------------------- Google Sheets ----------------------------- */
+  const SHEET_KEY = "aef_sheet_v1";
+  let sheetCfg = { url: "", replace: true, lastSynced: 0 };
+
+  function loadSheetCfg() {
+    try { const raw = localStorage.getItem(SHEET_KEY); if (raw) sheetCfg = { ...sheetCfg, ...JSON.parse(raw) }; } catch (e) {}
+  }
+  function saveSheetCfg() { localStorage.setItem(SHEET_KEY, JSON.stringify(sheetCfg)); }
+
+  // Turn any Google Sheet link into a CSV endpoint we can fetch client-side.
+  function normalizeSheetUrl(input) {
+    let u = (input || "").trim();
+    if (!u) return "";
+    if (/output=csv/i.test(u)) return u;                       // already a CSV export
+    if (/\/pubhtml/i.test(u)) return u.replace(/\/pubhtml.*$/i, "/pub?output=csv");
+    if (/\/pub(\?|$)/i.test(u)) return u + (u.includes("?") ? "&" : "?") + "output=csv";
+    const m = u.match(/\/spreadsheets\/d\/(?!e\/)([a-zA-Z0-9-_]+)/); // standard /d/{id}
+    if (m) {
+      const gid = (u.match(/[#&?]gid=([0-9]+)/) || [])[1];
+      return `https://docs.google.com/spreadsheets/d/${m[1]}/gviz/tq?tqx=out:csv` + (gid ? `&gid=${gid}` : "");
+    }
+    return u;
+  }
+
+  function setSheetMsg(cls, text) {
+    const el = document.getElementById("sheetMsg");
+    el.className = "import-msg" + (cls ? " " + cls : "");
+    el.textContent = text || "";
+  }
+
+  function timeAgo(ts) {
+    if (!ts) return "";
+    const s = Math.round((Date.now() - ts) / 1000);
+    if (s < 60) return "just now";
+    if (s < 3600) return Math.floor(s / 60) + " min ago";
+    if (s < 86400) return Math.floor(s / 3600) + " hr ago";
+    return new Date(ts).toLocaleString();
+  }
+
+  async function syncSheet(isAuto) {
+    if (!sheetCfg.url) return;
+    const url = normalizeSheetUrl(sheetCfg.url);
+    if (!isAuto) setSheetMsg("", "Syncing…");
+    try {
+      const res = await fetch(url, { redirect: "follow", cache: "no-store" });
+      if (!res.ok) throw new Error("HTTP " + res.status + " — is the sheet shared/published?");
+      const text = await res.text();
+      if (/^\s*</.test(text)) throw new Error("Got a web page, not CSV. Use File → Share → Publish to web → CSV.");
+      const wb = XLSX.read(text, { type: "string" });
+      const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "" });
+      const { records, skipped } = importRows(json);
+      if (!records.length) throw new Error("No recognizable rows. Check the column headers.");
+      state.records = sheetCfg.replace ? records : state.records.concat(records);
+      sheetCfg.lastSynced = Date.now();
+      saveSheetCfg(); save(); render();
+      if (!isAuto) { setSheetMsg("ok", `✓ Synced ${records.length} record(s)${skipped ? `, ${skipped} skipped` : ""}.`); toast("Synced from Google Sheet"); }
+      reflectSheetUI();
+    } catch (e) {
+      const hint = e instanceof TypeError ? "Couldn't reach the sheet (network/CORS). Publishing it to web as CSV is the most reliable fix." : e.message;
+      if (!isAuto) { setSheetMsg("err", "✕ " + hint); toast("Sheet sync failed"); }
+      else console.warn("Auto-sync failed:", hint);
+    }
+  }
+
+  function reflectSheetUI() {
+    const connected = !!sheetCfg.url;
+    document.getElementById("sheetDisconnect").classList.toggle("hidden", !connected);
+    document.getElementById("sheetSync").classList.toggle("hidden", !connected);
+    document.getElementById("sheetConnect").textContent = connected ? "Update & sync" : "Connect & sync";
+    document.getElementById("sheetBtn").textContent = connected ? "Google Sheet ✓" : "Connect Google Sheet";
+    const status = document.getElementById("sheetStatus");
+    status.textContent = connected ? `Connected. Last synced ${timeAgo(sheetCfg.lastSynced) || "—"}.` : "";
+  }
+
+  function openSheetModal() {
+    document.getElementById("sheetUrl").value = sheetCfg.url || "";
+    document.getElementById("sheetReplace").checked = sheetCfg.replace;
+    setSheetMsg("", "");
+    reflectSheetUI();
+    document.getElementById("sheetBackdrop").classList.remove("hidden");
+  }
+  function closeSheetModal() { document.getElementById("sheetBackdrop").classList.add("hidden"); }
+
+  function connectSheet() {
+    const url = document.getElementById("sheetUrl").value.trim();
+    if (!url) { setSheetMsg("err", "Please paste a Google Sheet URL."); return; }
+    sheetCfg.url = url;
+    sheetCfg.replace = document.getElementById("sheetReplace").checked;
+    saveSheetCfg();
+    syncSheet(false);
+  }
+  function disconnectSheet() {
+    sheetCfg.url = ""; sheetCfg.lastSynced = 0;
+    saveSheetCfg();
+    setSheetMsg("", "Disconnected. Existing data was kept.");
+    reflectSheetUI();
+    render();
+  }
+
   /* -------------------------------- Theme -------------------------------- */
   function initTheme() {
     let t = localStorage.getItem(THEME_KEY);
@@ -428,6 +529,13 @@
     });
     document.getElementById("themeBtn").addEventListener("click", toggleTheme);
 
+    document.getElementById("sheetBtn").addEventListener("click", openSheetModal);
+    document.getElementById("sheetClose").addEventListener("click", closeSheetModal);
+    document.getElementById("sheetConnect").addEventListener("click", connectSheet);
+    document.getElementById("sheetSync").addEventListener("click", () => syncSheet(false));
+    document.getElementById("sheetDisconnect").addEventListener("click", disconnectSheet);
+    document.getElementById("sheetBackdrop").addEventListener("click", (e) => { if (e.target.id === "sheetBackdrop") closeSheetModal(); });
+
     document.getElementById("channelFilter").addEventListener("change", (e) => { state.channelFilter = e.target.value; render(); });
     document.getElementById("periodFilter").addEventListener("change", (e) => { state.periodFilter = e.target.value; render(); });
     document.getElementById("searchInput").addEventListener("input", (e) => { state.search = e.target.value; render(); });
@@ -446,8 +554,15 @@
 
   /* -------------------------------- Init --------------------------------- */
   initTheme();
+  loadSheetCfg();
   load();
   bind();
-  if (!state.records.length) state.records = sampleData(); // first-run demo
-  render();
+  if (sheetCfg.url) {
+    reflectSheetUI();
+    render();
+    syncSheet(true);            // pull latest from the connected sheet
+  } else {
+    if (!state.records.length) state.records = sampleData(); // first-run demo
+    render();
+  }
 })();

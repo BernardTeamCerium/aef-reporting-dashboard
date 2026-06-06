@@ -26,6 +26,7 @@
       </div>
       <div class="actions">
         <button class="btn primary" id="addBtn">+ Add campaign</button>
+        <button class="btn" id="sheetBtn">Connect Google Sheet</button>
         <label class="upload-label" for="fileInput">Upload Excel / CSV</label>
         <input id="fileInput" type="file" accept=".xlsx,.xls,.csv" multiple />
         <button class="btn" id="templateBtn">Download template</button>
@@ -160,6 +161,43 @@
           <button type="submit" class="btn primary">Save campaign</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Google Sheet modal -->
+  <div class="modal-backdrop hidden" id="sheetBackdrop">
+    <div class="modal">
+      <div class="modal-head">
+        <h3>Connect a Google Sheet</h3>
+        <button class="icon-btn" id="sheetClose" aria-label="Close">✕</button>
+      </div>
+      <div class="sheet-body">
+        <p class="muted" style="margin-top:0">
+          Use a Google Sheet as the live data source. For the most reliable connection, in
+          Google Sheets choose <strong>File → Share → Publish to web → Comma-separated values
+          (.csv)</strong> and paste that link below. A normal "anyone with the link can view"
+          URL works too.
+        </p>
+        <label class="field" style="margin-bottom:1rem">
+          <span>Google Sheet URL</span>
+          <input type="url" id="sheetUrl" placeholder="https://docs.google.com/spreadsheets/d/e/…/pub?output=csv" />
+        </label>
+        <label class="check">
+          <input type="checkbox" id="sheetReplace" checked />
+          Treat the sheet as the source of truth (replace existing data on each sync)
+        </label>
+        <p class="muted small" style="margin:.6rem 0 0">
+          The sheet's first row must be headers: Date, Campaign, Channel, Impressions, Clicks,
+          Spend, Conversions, Revenue (any order, case-insensitive).
+        </p>
+        <div id="sheetMsg" class="import-msg"></div>
+        <div class="form-foot" style="margin-top:1.2rem">
+          <button type="button" class="btn danger hidden" id="sheetDisconnect">Disconnect</button>
+          <button type="button" class="btn hidden" id="sheetSync">Sync now</button>
+          <button type="button" class="btn primary" id="sheetConnect">Connect &amp; sync</button>
+        </div>
+        <p class="footer-note" id="sheetStatus"></p>
+      </div>
     </div>
   </div>
 

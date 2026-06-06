@@ -20,6 +20,9 @@ navy wordmark with the "An AmeriLife Company" tagline, Satoshi typeface, soft
 - **Charts** — Spend vs. revenue over time (with month-over-month badge), spend
   by channel, conversions & CTR by month, and top campaigns by ROAS.
 - **Manual entry** — Add, edit, and delete campaign records with a simple form.
+- **Google Sheet as a live source** — Connect a published/link-shared Google
+  Sheet and the dashboard fetches it directly in the browser, treating the sheet
+  as the source of truth and auto-syncing on load. See "Connect a Google Sheet".
 - **Excel / CSV import** — Upload one or more files. Columns are matched by name
   (case-insensitive), so order doesn't matter, and common variants are
   recognized (e.g. `Cost` → Spend, `Platform` → Channel, `Amount spent` → Spend).
@@ -55,6 +58,26 @@ After that, every push to `main` redeploys automatically. The site will be at:
 ```
 https://bernardteamcerium.github.io/aef-reporting-dashboard/
 ```
+
+## Connect a Google Sheet
+
+Click **Connect Google Sheet** in the top bar and paste your sheet link. The most
+reliable option:
+
+1. In Google Sheets: **File → Share → Publish to web → Comma-separated values
+   (.csv)** and copy that link.
+2. Paste it into the dialog and click **Connect & sync**.
+
+A normal "anyone with the link can view" URL also works — the app converts it to a
+CSV endpoint automatically. The sheet's first row must be headers (Date, Campaign,
+Channel, Impressions, Clicks, Spend, Conversions, Revenue — any order). With
+"source of truth" enabled (default), each sync replaces the dashboard's data with
+the sheet's contents; the sheet is re-fetched automatically every time the page
+loads, and on demand via **Sync now**.
+
+> Because this is a static site with no server, the sheet must be readable without
+> a Google login (published or link-shared). Don't connect a sheet containing data
+> you wouldn't want anyone with the URL to see.
 
 ## Spreadsheet format
 

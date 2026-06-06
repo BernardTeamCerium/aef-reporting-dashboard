@@ -104,6 +104,9 @@ input[type=file]{display:none}
 .field span{color:var(--color-text-muted);font-weight:600}
 .field input{background:var(--color-surface-2);color:var(--color-text);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:.7rem .8rem;font-size:var(--text-base);font-family:inherit}
 .form-foot{grid-column:1/-1;display:flex;justify-content:flex-end;gap:.7rem;margin-top:.3rem}
+.sheet-body{padding:1.4rem}
+.sheet-body .field input{width:100%}
+.source-pill{display:inline-flex;align-items:center;gap:.4rem;padding:.3rem .7rem;border-radius:999px;background:var(--color-primary-highlight);color:var(--color-primary);font-size:var(--text-xs);font-weight:700;margin-left:.5rem}
 
 /* ---------- Toast ---------- */
 .toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:var(--color-text);color:var(--color-bg);padding:.8rem 1.3rem;border-radius:999px;box-shadow:var(--shadow-md);z-index:100;font-size:var(--text-sm);font-weight:600}
