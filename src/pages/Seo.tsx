@@ -109,9 +109,9 @@ export function Seo() {
                 <Line
                   type="monotone"
                   dataKey="avgRank"
-                  stroke="#1f48f0"
+                  stroke="#ea520c"
                   strokeWidth={2.5}
-                  dot={{ r: 3, fill: '#1f48f0' }}
+                  dot={{ r: 3, fill: '#ea520c' }}
                   activeDot={{ r: 5 }}
                 />
               </LineChart>
@@ -239,7 +239,7 @@ function ScoreDial({ score }: { score: number }) {
   const radius = 30
   const circ = 2 * Math.PI * radius
   const offset = circ - (score / 100) * circ
-  const color = score >= 75 ? '#10b981' : score >= 50 ? '#f59e0b' : '#ef4444'
+  const color = score >= 75 ? '#ea520c' : score >= 50 ? '#f59e0b' : '#ef4444'
   return (
     <div className="relative h-24 w-24 shrink-0">
       <svg className="h-24 w-24 -rotate-90" viewBox="0 0 72 72">

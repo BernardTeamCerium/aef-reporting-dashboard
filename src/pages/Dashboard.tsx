@@ -43,7 +43,7 @@ const metricIcons = [
   <Clock size={20} key="t" />,
 ]
 
-const sourceColors = ['#1f48f0', '#3366ff', '#598dff', '#8eb6ff', '#bcd3ff']
+const sourceColors = ['#c23e0c', '#ea520c', '#f96d16', '#fb8a3c', '#fdb074']
 
 export function Dashboard() {
   const { posts, orders, tickets } = useAppState()
@@ -86,8 +86,8 @@ export function Dashboard() {
               <AreaChart data={performanceSeries} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="gVisitors" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#1f48f0" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#1f48f0" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#ea520c" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#ea520c" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" vertical={false} />
@@ -105,7 +105,7 @@ export function Dashboard() {
                   type="monotone"
                   dataKey="visitors"
                   name="Visitors"
-                  stroke="#1f48f0"
+                  stroke="#ea520c"
                   strokeWidth={2}
                   fill="url(#gVisitors)"
                 />
@@ -113,7 +113,7 @@ export function Dashboard() {
                   type="monotone"
                   dataKey="leads"
                   name="Leads"
-                  stroke="#10b981"
+                  stroke="#171717"
                   strokeWidth={2}
                   fill="transparent"
                 />
@@ -121,16 +121,16 @@ export function Dashboard() {
                   type="monotone"
                   dataKey="appointments"
                   name="Appointments"
-                  stroke="#f59e0b"
+                  stroke="#fb8a3c"
                   strokeWidth={2}
                   fill="transparent"
                 />
               </AreaChart>
             </ResponsiveContainer>
             <div className="flex flex-wrap items-center justify-center gap-4 pb-1 pt-2 text-xs text-slate-500">
-              <Legend color="#1f48f0" label="Visitors" />
-              <Legend color="#10b981" label="Leads" />
-              <Legend color="#f59e0b" label="Appointments" />
+              <Legend color="#ea520c" label="Visitors" />
+              <Legend color="#171717" label="Leads" />
+              <Legend color="#fb8a3c" label="Appointments" />
             </div>
           </div>
         </Card>
@@ -325,7 +325,7 @@ function ScoreRing({ score }: { score: number }) {
           cy="32"
           r={radius}
           fill="none"
-          stroke="#10b981"
+          stroke="#ea520c"
           strokeWidth="7"
           strokeLinecap="round"
           strokeDasharray={circ}

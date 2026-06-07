@@ -34,7 +34,7 @@ export function Sidebar({ mobileOpen, onClose }: SidebarProps) {
             </div>
             <div>
               <p className="text-sm font-semibold text-white">Marketing Hub</p>
-              <p className="text-xs text-slate-400">OneStop Marketing</p>
+              <p className="text-xs text-slate-400">OneStop Marketing &amp; Print</p>
             </div>
           </div>
           <button
