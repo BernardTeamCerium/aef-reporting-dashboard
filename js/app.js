@@ -22,8 +22,9 @@
     records: [],
     sortKey: "date",
     sortDir: -1,
-    channelFilter: "",
-    periodFilter: "",
+    brandFilter: "",
+    networkFilter: "",
+    dayFilter: "",
     search: "",
   };
   let charts = {};
@@ -58,17 +59,21 @@
   function sampleData() {
     const ch = ["Google Ads", "Facebook", "Instagram", "LinkedIn"];
     const camps = ["Spring Promo", "Brand Awareness", "Lead Gen", "Retargeting"];
+    const brands = ["Elite Medicare", "Elite Life", "Elite Annuities", "Elite Wealth"];
     const out = [];
     let seed = 7;
     const rnd = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+    // a few days per month so the daily pivot has multiple columns
     for (let m = 1; m <= 5; m++) {
-      ch.forEach((c, i) => {
-        const impressions = 40000 + Math.round(rnd() * 70000);
-        const clicks = Math.round(impressions * (0.012 + rnd() * 0.03));
-        const spend = Math.round(clicks * (0.8 + rnd() * 2.2));
-        const conversions = Math.round(clicks * (0.03 + rnd() * 0.07));
-        const revenue = Math.round(conversions * (70 + rnd() * 140));
-        out.push({ id: cryptoId(), date: `2026-0${m}-15`, campaign: camps[i], channel: c, impressions, clicks, spend, conversions, revenue });
+      ["05", "15", "25"].forEach((day) => {
+        ch.forEach((c, i) => {
+          const impressions = 14000 + Math.round(rnd() * 24000);
+          const clicks = Math.round(impressions * (0.012 + rnd() * 0.03));
+          const spend = Math.round(clicks * (0.8 + rnd() * 2.2));
+          const conversions = Math.round(clicks * (0.03 + rnd() * 0.07));
+          const revenue = Math.round(conversions * (70 + rnd() * 140));
+          out.push({ id: cryptoId(), date: `2026-0${m}-${day}`, brand: brands[i], campaign: camps[i], channel: c, impressions, clicks, spend, conversions, revenue });
+        });
       });
     }
     return out;
@@ -78,8 +83,9 @@
   const monthKey = (d) => (d || "").slice(0, 7);
   function filtered() {
     let rows = state.records.map(decorate);
-    if (state.channelFilter) rows = rows.filter((r) => r.channel === state.channelFilter);
-    if (state.periodFilter) rows = rows.filter((r) => monthKey(r.date) === state.periodFilter);
+    if (state.brandFilter) rows = rows.filter((r) => (r.brand || "") === state.brandFilter);
+    if (state.networkFilter) rows = rows.filter((r) => r.channel === state.networkFilter);
+    if (state.dayFilter) rows = rows.filter((r) => r.date === state.dayFilter);
     if (state.search) {
       const q = state.search.toLowerCase();
       rows = rows.filter((r) => (r.campaign || "").toLowerCase().includes(q) || (r.channel || "").toLowerCase().includes(q));
@@ -98,13 +104,11 @@
     populateFilters();
     const rows = filtered();
 
-    document.getElementById("recordsLoaded").textContent = num(state.records.length);
-    document.getElementById("channelsLoaded").textContent = new Set(state.records.map((r) => r.channel).filter(Boolean)).size;
-    const monthsCount = new Set(state.records.map((r) => monthKey(r.date))).size;
     const srcNote = sheetCfg.url ? ` · source: Google Sheet (synced ${timeAgo(sheetCfg.lastSynced) || "—"})` : "";
-    document.getElementById("statusText").textContent = state.records.length
-      ? `${state.records.length} record(s) loaded across ${monthsCount} month(s)${srcNote}.`
-      : (sheetCfg.url ? "Connected to Google Sheet — syncing…" : "No campaign data loaded yet.");
+    const filteredNote = rows.length !== state.records.length ? `${num(rows.length)} of ${num(state.records.length)} shown` : `${num(state.records.length)} record(s)`;
+    document.getElementById("dataStatus").textContent = state.records.length
+      ? filteredNote + srcNote
+      : (sheetCfg.url ? "Connected to Google Sheet — syncing…" : "No data yet — add a campaign, upload a file, or connect a sheet.");
 
     const tot = {
       impressions: sumf(rows, "impressions"), clicks: sumf(rows, "clicks"),
@@ -123,16 +127,75 @@
     document.getElementById("kpiClicksNote").textContent = num(tot.clicks) + " clicks";
 
     renderTable(rows);
+    renderPivot(rows);
     drawCharts(rows);
   }
 
+  const dayLabel = (d) => { const dt = new Date(d + "T00:00:00"); return isNaN(dt) ? d : dt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }); };
+
   function populateFilters() {
-    const channels = [...new Set(state.records.map((r) => r.channel).filter(Boolean))].sort();
-    const periods = [...new Set(state.records.map((r) => monthKey(r.date)).filter(Boolean))].sort().reverse();
-    const cf = document.getElementById("channelFilter");
-    const pf = document.getElementById("periodFilter");
-    cf.innerHTML = '<option value="">All channels</option>' + channels.map((c) => `<option ${c === state.channelFilter ? "selected" : ""}>${esc(c)}</option>`).join("");
-    pf.innerHTML = '<option value="">All months</option>' + periods.map((p) => `<option value="${p}" ${p === state.periodFilter ? "selected" : ""}>${monthLabel(p)}</option>`).join("");
+    const brands = [...new Set(state.records.map((r) => r.brand).filter(Boolean))].sort();
+    const networks = [...new Set(state.records.map((r) => r.channel).filter(Boolean))].sort();
+    const days = [...new Set(state.records.map((r) => r.date).filter(Boolean))].sort().reverse();
+    const opt = (val, label, sel) => `<option value="${esc(val)}" ${val === sel ? "selected" : ""}>${esc(label)}</option>`;
+
+    document.getElementById("brandFilter").innerHTML =
+      '<option value="">All brands</option>' + brands.map((b) => opt(b, b, state.brandFilter)).join("");
+    document.getElementById("networkFilter").innerHTML =
+      '<option value="">All networks</option>' + networks.map((n) => opt(n, n, state.networkFilter)).join("");
+    document.getElementById("dayFilter").innerHTML =
+      '<option value="">All days</option>' + days.map((d) => opt(d, dayLabel(d), state.dayFilter)).join("");
+
+    document.getElementById("brandOptions").innerHTML = brands.map((b) => `<option>${esc(b)}</option>`).join("");
+  }
+
+  /* ------------------------- Pivot: spend by day ------------------------- */
+  // Rows = campaign, columns = day, cell = total spend, plus row/column totals.
+  function renderPivot(rows) {
+    const head = document.getElementById("pivotHead");
+    const body = document.getElementById("pivotBody");
+    const foot = document.getElementById("pivotFoot");
+    const badge = document.getElementById("pivotBadge");
+
+    const days = [...new Set(rows.map((r) => r.date).filter(Boolean))].sort();
+    const camps = [...new Set(rows.map((r) => r.campaign || "(unnamed)"))].sort();
+
+    if (!days.length || !camps.length) {
+      head.innerHTML = ""; foot.innerHTML = "";
+      body.innerHTML = '<tr><td class="empty">No spend to show for the current filters.</td></tr>';
+      badge.textContent = "—";
+      return;
+    }
+
+    // spend[campaign][day]
+    const spend = {};
+    rows.forEach((r) => {
+      const c = r.campaign || "(unnamed)";
+      (spend[c] = spend[c] || {});
+      spend[c][r.date] = (spend[c][r.date] || 0) + (+r.spend || 0);
+    });
+
+    head.innerHTML = `<tr><th>Campaign</th>${days.map((d) => `<th class="num">${esc(dayLabel(d))}</th>`).join("")}<th class="num col-total">Total</th></tr>`;
+
+    body.innerHTML = camps.map((c) => {
+      let rowTotal = 0;
+      const cells = days.map((d) => {
+        const v = (spend[c] && spend[c][d]) || 0;
+        rowTotal += v;
+        return `<td class="num${v ? "" : " zero"}">${v ? money2(v) : "—"}</td>`;
+      }).join("");
+      return `<tr><td>${esc(c)}</td>${cells}<td class="num col-total">${money2(rowTotal)}</td></tr>`;
+    }).join("");
+
+    let grand = 0;
+    const footCells = days.map((d) => {
+      const v = rows.filter((r) => r.date === d).reduce((a, r) => a + (+r.spend || 0), 0);
+      grand += v;
+      return `<td class="num">${money2(v)}</td>`;
+    }).join("");
+    foot.innerHTML = `<tr><td>All campaigns</td>${footCells}<td class="num col-total">${money2(grand)}</td></tr>`;
+
+    badge.textContent = `${camps.length} campaign(s) × ${days.length} day(s)`;
   }
 
   function renderTable(rows) {
@@ -145,11 +208,12 @@
     });
     const body = document.getElementById("tableBody");
     if (!sorted.length) {
-      body.innerHTML = '<tr><td colspan="12" class="empty">No campaigns yet. Add one manually, upload an Excel/CSV file, or load the sample data.</td></tr>';
+      body.innerHTML = '<tr><td colspan="13" class="empty">No campaigns match the current filters.</td></tr>';
       return;
     }
     body.innerHTML = sorted.map((r) => `<tr>
       <td>${esc(r.date)}</td>
+      <td>${esc(r.brand || "—")}</td>
       <td>${esc(r.campaign)}</td>
       <td><span class="chip">${esc(r.channel)}</span></td>
       <td class="num">${num(r.impressions)}</td>
@@ -266,6 +330,7 @@
     document.getElementById("modalTitle").textContent = record ? "Edit campaign" : "Add campaign";
     document.getElementById("f_id").value = record ? record.id : "";
     document.getElementById("f_date").value = record ? record.date : new Date().toISOString().slice(0, 10);
+    document.getElementById("f_brand").value = record ? (record.brand || "") : "";
     document.getElementById("f_campaign").value = record ? record.campaign : "";
     document.getElementById("f_channel").value = record ? record.channel : "";
     ["impressions", "clicks", "spend", "conversions", "revenue"].forEach((k) => {
@@ -281,6 +346,7 @@
     const rec = {
       id: id || cryptoId(),
       date: document.getElementById("f_date").value,
+      brand: document.getElementById("f_brand").value.trim(),
       campaign: document.getElementById("f_campaign").value.trim(),
       channel: document.getElementById("f_channel").value.trim(),
       impressions: +document.getElementById("f_impressions").value || 0,
@@ -303,9 +369,10 @@
 
   /* --------------------------- Import / Export --------------------------- */
   const HEADER_MAP = {
-    date: "date", month: "date", period: "date",
+    date: "date", month: "date", period: "date", day: "date",
+    brand: "brand", advertiser: "brand", account: "brand", product: "brand",
     campaign: "campaign", "campaign name": "campaign", name: "campaign",
-    channel: "channel", platform: "channel", source: "channel", medium: "channel",
+    channel: "channel", network: "channel", platform: "channel", source: "channel", medium: "channel",
     impressions: "impressions", impr: "impressions", views: "impressions",
     clicks: "clicks", "link clicks": "clicks",
     spend: "spend", cost: "spend", "ad spend": "spend", "amount spent": "spend", budget: "spend",
@@ -325,14 +392,14 @@
   function importRows(rawRows) {
     const records = []; let skipped = 0;
     rawRows.forEach((raw) => {
-      const rec = { id: cryptoId(), date: "", campaign: "", channel: "", impressions: 0, clicks: 0, spend: 0, conversions: 0, revenue: 0 };
+      const rec = { id: cryptoId(), date: "", brand: "", campaign: "", channel: "", impressions: 0, clicks: 0, spend: 0, conversions: 0, revenue: 0 };
       let matched = false;
       Object.keys(raw).forEach((col) => {
         const field = normalizeHeader(col);
         if (!field) return; matched = true;
         const val = raw[col];
         if (field === "date") rec.date = normalizeDate(val);
-        else if (field === "campaign" || field === "channel") rec[field] = String(val == null ? "" : val).trim();
+        else if (field === "brand" || field === "campaign" || field === "channel") rec[field] = String(val == null ? "" : val).trim();
         else rec[field] = parseNumber(val);
       });
       if (!matched || (!rec.campaign && !rec.channel && !rec.spend && !rec.impressions)) { skipped++; return; }
@@ -364,7 +431,7 @@
 
   function exportCsv() {
     const rows = state.records.map(decorate);
-    const headers = ["date", "campaign", "channel", "impressions", "clicks", "ctr", "spend", "cpc", "conversions", "cpa", "revenue", "roas"];
+    const headers = ["date", "brand", "campaign", "channel", "impressions", "clicks", "ctr", "spend", "cpc", "conversions", "cpa", "revenue", "roas"];
     const lines = [headers.join(",")];
     rows.forEach((r) => lines.push(headers.map((h) => {
       let v = r[h]; if (typeof v === "number") v = Math.round(v * 100) / 100;
@@ -374,8 +441,8 @@
   }
 
   function downloadTemplate() {
-    const headers = "Date,Campaign,Channel,Impressions,Clicks,Spend,Conversions,Revenue";
-    const sample = ["2026-01-15,Spring Promo,Google Ads,52000,1340,1120,68,5400", "2026-01-15,Brand Awareness,Facebook,98000,2100,1850,41,2900"];
+    const headers = "Date,Brand,Campaign,Network,Impressions,Clicks,Spend,Conversions,Revenue";
+    const sample = ["2026-01-15,Elite Medicare,Spring Promo,Google Ads,52000,1340,1120,68,5400", "2026-01-15,Elite Life,Brand Awareness,Facebook,98000,2100,1850,41,2900"];
     download("aef-campaign-template.csv", [headers, ...sample].join("\n"), "text/csv");
   }
 
@@ -536,9 +603,15 @@
     document.getElementById("sheetDisconnect").addEventListener("click", disconnectSheet);
     document.getElementById("sheetBackdrop").addEventListener("click", (e) => { if (e.target.id === "sheetBackdrop") closeSheetModal(); });
 
-    document.getElementById("channelFilter").addEventListener("change", (e) => { state.channelFilter = e.target.value; render(); });
-    document.getElementById("periodFilter").addEventListener("change", (e) => { state.periodFilter = e.target.value; render(); });
+    document.getElementById("brandFilter").addEventListener("change", (e) => { state.brandFilter = e.target.value; render(); });
+    document.getElementById("networkFilter").addEventListener("change", (e) => { state.networkFilter = e.target.value; render(); });
+    document.getElementById("dayFilter").addEventListener("change", (e) => { state.dayFilter = e.target.value; render(); });
     document.getElementById("searchInput").addEventListener("input", (e) => { state.search = e.target.value; render(); });
+    document.getElementById("clearFilters").addEventListener("click", () => {
+      state.brandFilter = ""; state.networkFilter = ""; state.dayFilter = ""; state.search = "";
+      document.getElementById("searchInput").value = "";
+      render();
+    });
 
     document.getElementById("tableBody").addEventListener("click", (e) => {
       const edit = e.target.closest("[data-edit]"); const del = e.target.closest("[data-del]");

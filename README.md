@@ -15,18 +15,21 @@ navy wordmark with the "An AmeriLife Company" tagline, Satoshi typeface, soft
 
 ## Features
 
-- **Hero + KPI overview** — Total Spend, Revenue, ROAS, Conversions (with CPA),
-  and CTR (with clicks).
+- **KPI overview** — Total Spend, Revenue, ROAS, Conversions (with CPA), and CTR
+  (with clicks), all reflecting the active filters.
+- **Top filters** — Filter the whole dashboard by **Brand**, **Network**, and
+  **Day**, plus a free-text search.
+- **Spend-by-day pivot** — A bottom table showing **total spend by day, per
+  campaign** (campaigns as rows, days as columns) with row/column totals.
 - **Charts** — Spend vs. revenue over time (with month-over-month badge), spend
-  by channel, conversions & CTR by month, and top campaigns by ROAS.
+  by network, conversions & CTR by month, and top campaigns by ROAS.
 - **Manual entry** — Add, edit, and delete campaign records with a simple form.
 - **Google Sheet as a live source** — Connect a published/link-shared Google
   Sheet and the dashboard fetches it directly in the browser, treating the sheet
   as the source of truth and auto-syncing on load. See "Connect a Google Sheet".
 - **Excel / CSV import** — Upload one or more files. Columns are matched by name
   (case-insensitive), so order doesn't matter, and common variants are
-  recognized (e.g. `Cost` → Spend, `Platform` → Channel, `Amount spent` → Spend).
-- **Filters** — Search, plus filter by channel and by month.
+  recognized (e.g. `Cost` → Spend, `Platform`/`Network` → Network, `Brand` → Brand).
 - **Export** — Download a CSV of all records with calculated CTR, CPC, CPA, ROAS.
 - **Light / dark theme** — Respects your system preference; toggle with ◐.
 - **Auto-calculated metrics** — CTR, CPC, CPA, and ROAS are derived for you.
@@ -69,8 +72,8 @@ reliable option:
 2. Paste it into the dialog and click **Connect & sync**.
 
 A normal "anyone with the link can view" URL also works — the app converts it to a
-CSV endpoint automatically. The sheet's first row must be headers (Date, Campaign,
-Channel, Impressions, Clicks, Spend, Conversions, Revenue — any order). With
+CSV endpoint automatically. The sheet's first row must be headers (Date, Brand,
+Campaign, Network, Impressions, Clicks, Spend, Conversions, Revenue — any order). With
 "source of truth" enabled (default), each sync replaces the dashboard's data with
 the sheet's contents; the sheet is re-fetched automatically every time the page
 loads, and on demand via **Sync now**.
@@ -84,8 +87,8 @@ loads, and on demand via **Sync now**.
 Use the in-app **Download template** button, or match these headers (any order,
 case-insensitive):
 
-| Date | Campaign | Channel | Impressions | Clicks | Spend | Conversions | Revenue |
-|------|----------|---------|-------------|--------|-------|-------------|---------|
+| Date | Brand | Campaign | Network | Impressions | Clicks | Spend | Conversions | Revenue |
+|------|-------|----------|---------|-------------|--------|-------|-------------|---------|
 
 `CTR`, `CPC`, `CPA`, and `ROAS` are calculated automatically.
 

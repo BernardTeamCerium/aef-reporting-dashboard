@@ -38,28 +38,24 @@
     </header>
 
     <main id="main">
-      <!-- Hero -->
-      <section class="hero">
-        <div class="panel hero-card">
-          <div class="eyebrow">Performance overview</div>
-          <h2>One view for spend, reach, and return across every channel.</h2>
-          <p>Enter campaign numbers manually or upload your ad-platform exports. The dashboard combines everything into running trends for the Allied Elite Financial marketing team and updates instantly. Your data is saved right in this browser.</p>
-          <div class="mini-stats">
-            <div class="mini"><div class="label">Records loaded</div><div class="value" id="recordsLoaded">0</div></div>
-            <div class="mini"><div class="label">Channels</div><div class="value" id="channelsLoaded">0</div></div>
-          </div>
+      <!-- Filters -->
+      <section class="panel filters">
+        <div class="filter-group">
+          <label class="filter"><span>Brand</span>
+            <select id="brandFilter" class="select"><option value="">All brands</option></select>
+          </label>
+          <label class="filter"><span>Network</span>
+            <select id="networkFilter" class="select"><option value="">All networks</option></select>
+          </label>
+          <label class="filter"><span>Day</span>
+            <select id="dayFilter" class="select"><option value="">All days</option></select>
+          </label>
+          <label class="filter"><span>Search</span>
+            <input type="search" id="searchInput" class="search" placeholder="Campaign or network…" />
+          </label>
+          <button class="btn" id="clearFilters" type="button">Clear filters</button>
         </div>
-        <div class="panel upload-box">
-          <div class="eyebrow">Upload guidance</div>
-          <h3 style="margin:0 0 .5rem 0">Expected file format</h3>
-          <p style="margin:0;color:var(--color-text-muted)">Columns are matched by name (case-insensitive), so order doesn't matter. Common variants are recognized — e.g. <em>Cost</em> → Spend, <em>Platform</em> → Channel.</p>
-          <ul>
-            <li>Headers: Date, Campaign, Channel, Impressions, Clicks, Spend, Conversions, Revenue.</li>
-            <li>Upload one file or several at once; rows are appended.</li>
-            <li>CTR, CPC, CPA and ROAS are calculated for you.</li>
-          </ul>
-          <div class="footer-note" id="statusText">No campaign data loaded yet.</div>
-        </div>
+        <div class="filter-status" id="dataStatus"></div>
       </section>
 
       <!-- KPIs -->
@@ -81,7 +77,7 @@
           <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
         </div>
         <div class="panel card">
-          <h3>Spend by channel</h3>
+          <h3>Spend by network</h3>
           <div class="chart-wrap small-chart"><canvas id="channelChart"></canvas></div>
         </div>
       </section>
@@ -98,23 +94,34 @@
         </div>
       </section>
 
+      <!-- Total spend by day, per campaign (pivot) -->
+      <section class="panel card" style="margin-bottom:var(--space-4)">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:1rem">
+          <h3 style="margin:0">Total spend by day, per campaign</h3>
+          <span class="badge" id="pivotBadge">—</span>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table pivot-table" id="pivotTable">
+            <thead id="pivotHead"></thead>
+            <tbody id="pivotBody"></tbody>
+            <tfoot id="pivotFoot"></tfoot>
+          </table>
+        </div>
+      </section>
+
       <!-- Records table -->
       <section class="panel card" style="margin-bottom:var(--space-4)">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:1rem">
           <h3 style="margin:0">Campaign records</h3>
-          <div class="filter-bar" style="margin:0">
-            <input type="search" id="searchInput" class="search" placeholder="Search campaigns…" />
-            <select id="channelFilter" class="select"><option value="">All channels</option></select>
-            <select id="periodFilter" class="select"><option value="">All months</option></select>
-          </div>
         </div>
         <div class="table-wrap">
           <table class="data-table" id="dataTable">
             <thead>
               <tr>
                 <th data-sort="date">Date</th>
+                <th data-sort="brand">Brand</th>
                 <th data-sort="campaign">Campaign</th>
-                <th data-sort="channel">Channel</th>
+                <th data-sort="channel">Network</th>
                 <th class="num" data-sort="impressions">Impressions</th>
                 <th class="num" data-sort="clicks">Clicks</th>
                 <th class="num" data-sort="ctr">CTR</th>
@@ -143,8 +150,12 @@
       <form id="campaignForm" class="form-grid">
         <input type="hidden" id="f_id" />
         <label class="field"><span>Date</span><input type="date" id="f_date" required /></label>
+        <label class="field"><span>Brand</span>
+          <input type="text" id="f_brand" list="brandOptions" placeholder="Allied Elite Financial" />
+          <datalist id="brandOptions"></datalist>
+        </label>
         <label class="field"><span>Campaign name</span><input type="text" id="f_campaign" placeholder="Spring Promo" required /></label>
-        <label class="field"><span>Channel</span>
+        <label class="field"><span>Network</span>
           <input type="text" id="f_channel" list="channelOptions" placeholder="Google Ads" required />
           <datalist id="channelOptions">
             <option>Google Ads</option><option>Facebook</option><option>Instagram</option><option>LinkedIn</option>
@@ -187,8 +198,8 @@
           Treat the sheet as the source of truth (replace existing data on each sync)
         </label>
         <p class="muted small" style="margin:.6rem 0 0">
-          The sheet's first row must be headers: Date, Campaign, Channel, Impressions, Clicks,
-          Spend, Conversions, Revenue (any order, case-insensitive).
+          The sheet's first row must be headers: Date, Brand, Campaign, Network, Impressions,
+          Clicks, Spend, Conversions, Revenue (any order, case-insensitive).
         </p>
         <div id="sheetMsg" class="import-msg"></div>
         <div class="form-foot" style="margin-top:1.2rem">
