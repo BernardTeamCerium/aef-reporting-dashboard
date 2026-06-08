@@ -1,9 +1,10 @@
-# Allied Elite Financial — Digital Campaign Dashboard
+# Digital Marketing Performance Report
 
-A lightweight dashboard for reporting Allied Elite Financial's digital marketing
-numbers. Update metrics by hand or upload an Excel/CSV export, and see everything
-visualized on a branded dashboard. No backend, no build step, no accounts — it's
-a single static site and your data is stored in your browser.
+A lightweight dashboard for reporting digital marketing numbers — prepared by
+**Bernard Frazier** for the client **Allied Elite Financial**. Update metrics by
+hand, upload an Excel/CSV export, or connect a Google Sheet, and see everything
+visualized. No backend, no build step, no accounts — it's a single static site and
+your data is stored in your browser.
 
 Styled with the Allied Elite Financial brand system: the mint→blue gradient mark,
 navy wordmark with the "An AmeriLife Company" tagline, Satoshi typeface, soft
