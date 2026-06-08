@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="Allied Elite Financial">
+  <defs>
+    <linearGradient id="aeGrad" x1="12" y1="12" x2="86" y2="92" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1AE6A0"/>
+      <stop offset=".5" stop-color="#16BEE6"/>
+      <stop offset="1" stop-color="#2C79F6"/>
+    </linearGradient>
+  </defs>
+  <!-- Stylized "A" in the Allied Elite Financial gradient. -->
+  <path fill="url(#aeGrad)" fill-rule="evenodd"
+    d="M43 7 L57 7 L92 93 L73 93 L65 71 L35 71 L27 93 L8 93 Z
+       M50 30 L41 60 L59 60 Z"/>
+</svg>

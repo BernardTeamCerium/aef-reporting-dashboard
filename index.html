@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Allied Elite Financial — Digital Campaign Dashboard</title>
+  <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
+  <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <a href="#main" style="position:absolute;left:-9999px;top:auto;">Skip to content</a>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo">
+          <img src="assets/logo.svg" alt="Allied Elite Financial" />
+        </div>
+        <div>
+          <h1>Allied Elite Financial <span class="title-light">— Digital Campaign Dashboard</span></h1>
+          <div class="tagline">An AmeriLife Company</div>
+          <div class="sub">Report marketing performance across Allied Elite Financial's digital campaigns — spend, reach, conversions, and ROAS. Update numbers by hand or upload an Excel/CSV export.</div>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn primary" id="addBtn">+ Add campaign</button>
+        <button class="btn" id="sheetBtn">Connect Google Sheet</button>
+        <label class="upload-label" for="fileInput">Upload Excel / CSV</label>
+        <input id="fileInput" type="file" accept=".xlsx,.xls,.csv" multiple />
+        <button class="btn" id="templateBtn">Download template</button>
+        <button class="btn" id="exportBtn">Export CSV</button>
+        <button class="btn" id="loadSampleBtn">Load sample data</button>
+        <button class="btn" id="clearBtn">Clear data</button>
+        <button class="btn" id="themeBtn" aria-label="Toggle theme">◐</button>
+      </div>
+    </header>
+
+    <main id="main">
+      <!-- Filters -->
+      <section class="panel filters">
+        <div class="filter-group">
+          <label class="filter"><span>Brand</span>
+            <select id="brandFilter" class="select"><option value="">All brands</option></select>
+          </label>
+          <label class="filter"><span>Network</span>
+            <select id="networkFilter" class="select"><option value="">All networks</option></select>
+          </label>
+          <label class="filter"><span>Day</span>
+            <select id="dayFilter" class="select"><option value="">All days</option></select>
+          </label>
+          <label class="filter"><span>Search</span>
+            <input type="search" id="searchInput" class="search" placeholder="Campaign or network…" />
+          </label>
+          <button class="btn" id="clearFilters" type="button">Clear filters</button>
+        </div>
+        <div class="filter-status" id="dataStatus"></div>
+      </section>
+
+      <!-- KPIs -->
+      <section class="kpis" id="kpiGrid">
+        <div class="panel kpi"><div class="label">Total spend</div><div class="value" id="kpiSpend">$0</div><div class="note">Across selected data</div></div>
+        <div class="panel kpi"><div class="label">Revenue</div><div class="value" id="kpiRevenue">$0</div><div class="note">Attributed conversion value</div></div>
+        <div class="panel kpi"><div class="label">ROAS</div><div class="value" id="kpiRoas">0.00×</div><div class="note">Revenue ÷ spend</div></div>
+        <div class="panel kpi"><div class="label">Conversions</div><div class="value" id="kpiConversions">0</div><div class="note" id="kpiCpaNote">$0 cost per conversion</div></div>
+        <div class="panel kpi"><div class="label">Click-through rate</div><div class="value" id="kpiCtr">0.0%</div><div class="note" id="kpiClicksNote">0 clicks</div></div>
+      </section>
+
+      <!-- Charts row 1 -->
+      <section class="grid">
+        <div class="panel card">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:.5rem">
+            <h3>Spend vs. revenue over time</h3>
+            <span class="badge" id="revenueBadge">No data</span>
+          </div>
+          <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
+        </div>
+        <div class="panel card">
+          <h3>Spend by network</h3>
+          <div class="chart-wrap small-chart"><canvas id="channelChart"></canvas></div>
+        </div>
+      </section>
+
+      <!-- Charts row 2 -->
+      <section class="grid">
+        <div class="panel card">
+          <h3>Conversions &amp; click-through rate by month</h3>
+          <div class="chart-wrap small-chart"><canvas id="convChart"></canvas></div>
+        </div>
+        <div class="panel card">
+          <h3>Top campaigns by ROAS</h3>
+          <div class="chart-wrap small-chart"><canvas id="roasChart"></canvas></div>
+        </div>
+      </section>
+
+      <!-- Total spend by day, per campaign (pivot) -->
+      <section class="panel card" style="margin-bottom:var(--space-4)">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:1rem">
+          <h3 style="margin:0">Total spend by day, per campaign</h3>
+          <span class="badge" id="pivotBadge">—</span>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table pivot-table" id="pivotTable">
+            <thead id="pivotHead"></thead>
+            <tbody id="pivotBody"></tbody>
+            <tfoot id="pivotFoot"></tfoot>
+          </table>
+        </div>
+      </section>
+
+      <!-- Records table -->
+      <section class="panel card" style="margin-bottom:var(--space-4)">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:1rem">
+          <h3 style="margin:0">Campaign records</h3>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table" id="dataTable">
+            <thead>
+              <tr>
+                <th data-sort="date">Date</th>
+                <th data-sort="brand">Brand</th>
+                <th data-sort="campaign">Campaign</th>
+                <th data-sort="channel">Network</th>
+                <th class="num" data-sort="impressions">Impressions</th>
+                <th class="num" data-sort="clicks">Clicks</th>
+                <th class="num" data-sort="ctr">CTR</th>
+                <th class="num" data-sort="spend">Spend</th>
+                <th class="num" data-sort="conversions">Conv.</th>
+                <th class="num" data-sort="cpa">CPA</th>
+                <th class="num" data-sort="revenue">Revenue</th>
+                <th class="num" data-sort="roas">ROAS</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Add / edit modal -->
+  <div class="modal-backdrop hidden" id="modalBackdrop">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 id="modalTitle">Add campaign</h3>
+        <button class="icon-btn" id="modalClose" aria-label="Close">✕</button>
+      </div>
+      <form id="campaignForm" class="form-grid">
+        <input type="hidden" id="f_id" />
+        <label class="field"><span>Date</span><input type="date" id="f_date" required /></label>
+        <label class="field"><span>Brand</span>
+          <input type="text" id="f_brand" list="brandOptions" placeholder="Allied Elite Financial" />
+          <datalist id="brandOptions"></datalist>
+        </label>
+        <label class="field"><span>Campaign name</span><input type="text" id="f_campaign" placeholder="Spring Promo" required /></label>
+        <label class="field"><span>Network</span>
+          <input type="text" id="f_channel" list="channelOptions" placeholder="Google Ads" required />
+          <datalist id="channelOptions">
+            <option>Google Ads</option><option>Facebook</option><option>Instagram</option><option>LinkedIn</option>
+            <option>YouTube</option><option>TikTok</option><option>Email</option><option>Display</option>
+          </datalist>
+        </label>
+        <label class="field"><span>Impressions</span><input type="number" id="f_impressions" min="0" step="1" placeholder="0" /></label>
+        <label class="field"><span>Clicks</span><input type="number" id="f_clicks" min="0" step="1" placeholder="0" /></label>
+        <label class="field"><span>Spend ($)</span><input type="number" id="f_spend" min="0" step="0.01" placeholder="0.00" /></label>
+        <label class="field"><span>Conversions</span><input type="number" id="f_conversions" min="0" step="1" placeholder="0" /></label>
+        <label class="field"><span>Revenue ($)</span><input type="number" id="f_revenue" min="0" step="0.01" placeholder="0.00" /></label>
+        <div class="form-foot">
+          <button type="button" class="btn" id="cancelBtn">Cancel</button>
+          <button type="submit" class="btn primary">Save campaign</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Google Sheet modal -->
+  <div class="modal-backdrop hidden" id="sheetBackdrop">
+    <div class="modal">
+      <div class="modal-head">
+        <h3>Connect a Google Sheet</h3>
+        <button class="icon-btn" id="sheetClose" aria-label="Close">✕</button>
+      </div>
+      <div class="sheet-body">
+        <p class="muted" style="margin-top:0">
+          Use a Google Sheet as the live data source. For the most reliable connection, in
+          Google Sheets choose <strong>File → Share → Publish to web → Comma-separated values
+          (.csv)</strong> and paste that link below. A normal "anyone with the link can view"
+          URL works too.
+        </p>
+        <label class="field" style="margin-bottom:1rem">
+          <span>Google Sheet URL</span>
+          <input type="url" id="sheetUrl" placeholder="https://docs.google.com/spreadsheets/d/e/…/pub?output=csv" />
+        </label>
+        <label class="check">
+          <input type="checkbox" id="sheetReplace" checked />
+          Treat the sheet as the source of truth (replace existing data on each sync)
+        </label>
+        <p class="muted small" style="margin:.6rem 0 0">
+          The sheet's first row must be headers: Date, Brand, Campaign, Network, Impressions,
+          Clicks, Spend, Conversions, Revenue (any order, case-insensitive).
+        </p>
+        <div id="sheetMsg" class="import-msg"></div>
+        <div class="form-foot" style="margin-top:1.2rem">
+          <button type="button" class="btn danger hidden" id="sheetDisconnect">Disconnect</button>
+          <button type="button" class="btn hidden" id="sheetSync">Sync now</button>
+          <button type="button" class="btn primary" id="sheetConnect">Connect &amp; sync</button>
+        </div>
+        <p class="footer-note" id="sheetStatus"></p>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+  <script src="js/app.js"></script>
+</body>
+</html>
