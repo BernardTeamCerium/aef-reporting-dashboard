@@ -1,8 +1,9 @@
 import { NavLink } from 'react-router-dom'
-import { BarChart3, X } from 'lucide-react'
+import { X } from 'lucide-react'
 import { navItems } from '../../nav'
 import { currentAdvisor } from '../../data/mockData'
 import { cx } from '../../lib/format'
+import { Logo } from '../Logo'
 
 interface SidebarProps {
   mobileOpen: boolean
@@ -28,15 +29,7 @@ export function Sidebar({ mobileOpen, onClose }: SidebarProps) {
         )}
       >
         <div className="flex items-center justify-between px-6 py-5">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-600 text-white">
-              <BarChart3 size={20} />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-white">Marketing Hub</p>
-              <p className="text-xs text-slate-400">OneStop Marketing &amp; Print</p>
-            </div>
-          </div>
+          <Logo />
           <button
             onClick={onClose}
             className="rounded-lg p-1 text-slate-400 hover:bg-white/10 lg:hidden"
