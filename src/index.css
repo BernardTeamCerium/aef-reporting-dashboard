@@ -1,0 +1,36 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-brand-50: #fff5ed;
+  --color-brand-100: #ffe8d4;
+  --color-brand-200: #fed0aa;
+  --color-brand-300: #fdb074;
+  --color-brand-400: #fb8a3c;
+  --color-brand-500: #f96d16;
+  --color-brand-600: #ea520c;
+  --color-brand-700: #c23e0c;
+  --color-brand-800: #9a3212;
+  --color-brand-900: #7c2d12;
+  --color-ink-950: #141414;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: #f7f7f6;
+  color: #171717;
+  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+    Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Thin scrollbars for the app shell */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
