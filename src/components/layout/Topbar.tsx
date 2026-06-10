@@ -16,11 +16,12 @@ export function Topbar({ onOpenMenu }: TopbarProps) {
     n.to === '/' ? pathname === '/' : pathname.startsWith(n.to),
   )
   // Routes that aren't in the main nav (e.g. admin pages).
+  const adminTitles: Record<string, { label: string; description: string }> = {
+    '/admin/users': { label: 'User Management', description: 'Add & manage users' },
+    '/admin/progress': { label: 'Service Progress', description: 'Track tasks delivered for clients' },
+  }
   const current =
-    navMatch ??
-    (pathname.startsWith('/admin/users')
-      ? { label: 'User Management', description: 'Add & manage users' }
-      : undefined)
+    navMatch ?? adminTitles[pathname] ?? undefined
 
   return (
     <header className="sticky top-0 z-20 flex items-center justify-between gap-4 border-b border-slate-200 bg-white/80 px-4 py-3 backdrop-blur sm:px-6">

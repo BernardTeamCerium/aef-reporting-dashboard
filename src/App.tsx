@@ -8,6 +8,7 @@ import { Seo } from './pages/Seo'
 import { Support } from './pages/Support'
 import { Login } from './pages/Login'
 import { AdminUsers } from './pages/admin/Users'
+import { AdminProgress } from './pages/admin/Progress'
 
 export default function App() {
   return (
@@ -22,6 +23,7 @@ export default function App() {
           <Route path="/support" element={<Support />} />
           <Route element={<RequireAdmin />}>
             <Route path="/admin/users" element={<AdminUsers />} />
+            <Route path="/admin/progress" element={<AdminProgress />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

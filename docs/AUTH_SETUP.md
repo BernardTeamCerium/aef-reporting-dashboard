@@ -53,6 +53,36 @@ create policy "admins read all"
 > service-role key, which bypasses RLS — so no insert/update/delete policies are
 > needed for the app to work.
 
+### `service_tasks` table (Service Progress tracker)
+
+Also run this so the admin **Service Progress** board has a backend:
+
+```sql
+create table if not exists public.service_tasks (
+  id           uuid primary key default gen_random_uuid(),
+  title        text not null,
+  client       text not null,
+  category     text not null default 'Content'
+                 check (category in ('Content','Print','Website','SEO','Strategy')),
+  status       text not null default 'todo'
+                 check (status in ('todo','in_progress','done')),
+  assignee     text,
+  due_date     date,
+  completed_at date,
+  created_at   timestamptz not null default now()
+);
+
+alter table public.service_tasks enable row level security;
+
+-- Admins can read all tasks (writes go through the service-role API).
+create policy "admins read tasks"
+  on public.service_tasks for select
+  using (exists (
+    select 1 from public.profiles p
+    where p.id = auth.uid() and p.role = 'admin'
+  ));
+```
+
 ## 3. Add environment variables
 
 Add these in **Vercel → Project → Settings → Environment Variables** (and to a
@@ -85,6 +115,8 @@ Redeploy after adding them.
   unconfigured.
 - `src/pages/Login.tsx` — sign-in + first-run admin bootstrap.
 - `src/pages/admin/Users.tsx` — admin user management UI.
+- `src/pages/admin/Progress.tsx` + `src/lib/tasksApi.ts` — Service Progress board.
 - `api/auth/status.ts` — has the admin been created yet?
 - `api/auth/bootstrap-admin.ts` — one-time admin creation.
 - `api/admin/users.ts` — list / create / delete users (admin-only).
+- `api/admin/tasks.ts` — list / create / update / delete service tasks (admin-only).
