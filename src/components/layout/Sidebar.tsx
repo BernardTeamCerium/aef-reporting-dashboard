@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { LogOut, UserCog, X } from 'lucide-react'
+import { ListChecks, LogOut, UserCog, X } from 'lucide-react'
 import { navItems } from '../../nav'
 import { cx } from '../../lib/format'
 import { Logo } from '../Logo'
@@ -15,6 +15,21 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
     'group flex items-start gap-3 rounded-xl px-3 py-2.5 transition-colors',
     isActive ? 'bg-brand-600 text-white' : 'text-slate-300 hover:bg-white/5 hover:text-white',
   )
+
+const adminItems = [
+  {
+    to: '/admin/progress',
+    label: 'Service Progress',
+    description: 'Track tasks delivered',
+    icon: ListChecks,
+  },
+  {
+    to: '/admin/users',
+    label: 'User Management',
+    description: 'Add & manage users',
+    icon: UserCog,
+  },
+]
 
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/)
@@ -95,27 +110,29 @@ export function Sidebar({ mobileOpen, onClose }: SidebarProps) {
               <p className="px-3 pb-1 pt-4 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
                 Admin
               </p>
-              <NavLink to="/admin/users" onClick={onClose} className={linkClass}>
-                {({ isActive }) => (
-                  <>
-                    <UserCog
-                      size={19}
-                      className={cx(
-                        'mt-0.5 shrink-0',
-                        isActive ? 'text-white' : 'text-slate-400 group-hover:text-white',
-                      )}
-                    />
-                    <span>
-                      <span className="block text-sm font-medium">User Management</span>
-                      <span
-                        className={cx('block text-xs', isActive ? 'text-brand-100' : 'text-slate-500')}
-                      >
-                        Add &amp; manage users
+              {adminItems.map((item) => (
+                <NavLink key={item.to} to={item.to} onClick={onClose} className={linkClass}>
+                  {({ isActive }) => (
+                    <>
+                      <item.icon
+                        size={19}
+                        className={cx(
+                          'mt-0.5 shrink-0',
+                          isActive ? 'text-white' : 'text-slate-400 group-hover:text-white',
+                        )}
+                      />
+                      <span>
+                        <span className="block text-sm font-medium">{item.label}</span>
+                        <span
+                          className={cx('block text-xs', isActive ? 'text-brand-100' : 'text-slate-500')}
+                        >
+                          {item.description}
+                        </span>
                       </span>
-                    </span>
-                  </>
-                )}
-              </NavLink>
+                    </>
+                  )}
+                </NavLink>
+              ))}
             </>
           )}
         </nav>
