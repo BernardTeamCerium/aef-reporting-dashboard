@@ -12,9 +12,15 @@ interface TopbarProps {
 export function Topbar({ onOpenMenu }: TopbarProps) {
   const { pathname } = useLocation()
   const openSupport = useSupportModal()
-  const current = navItems.find((n) =>
+  const navMatch = navItems.find((n) =>
     n.to === '/' ? pathname === '/' : pathname.startsWith(n.to),
   )
+  // Routes that aren't in the main nav (e.g. admin pages).
+  const current =
+    navMatch ??
+    (pathname.startsWith('/admin/users')
+      ? { label: 'User Management', description: 'Add & manage users' }
+      : undefined)
 
   return (
     <header className="sticky top-0 z-20 flex items-center justify-between gap-4 border-b border-slate-200 bg-white/80 px-4 py-3 backdrop-blur sm:px-6">
