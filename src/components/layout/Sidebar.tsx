@@ -1,16 +1,35 @@
-import { NavLink } from 'react-router-dom'
-import { X } from 'lucide-react'
+import { NavLink, useNavigate } from 'react-router-dom'
+import { LogOut, UserCog, X } from 'lucide-react'
 import { navItems } from '../../nav'
-import { currentAdvisor } from '../../data/mockData'
 import { cx } from '../../lib/format'
 import { Logo } from '../Logo'
+import { useAuth } from '../../state/Auth'
 
 interface SidebarProps {
   mobileOpen: boolean
   onClose: () => void
 }
 
+const linkClass = ({ isActive }: { isActive: boolean }) =>
+  cx(
+    'group flex items-start gap-3 rounded-xl px-3 py-2.5 transition-colors',
+    isActive ? 'bg-brand-600 text-white' : 'text-slate-300 hover:bg-white/5 hover:text-white',
+  )
+
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/)
+  return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase() || 'U'
+}
+
 export function Sidebar({ mobileOpen, onClose }: SidebarProps) {
+  const { user, isAdmin, authEnabled, signOut } = useAuth()
+  const navigate = useNavigate()
+
+  const handleSignOut = async () => {
+    await signOut()
+    navigate('/login', { replace: true })
+  }
+
   return (
     <>
       {/* Mobile backdrop */}
@@ -46,14 +65,7 @@ export function Sidebar({ mobileOpen, onClose }: SidebarProps) {
               to={item.to}
               end={item.to === '/'}
               onClick={onClose}
-              className={({ isActive }) =>
-                cx(
-                  'group flex items-start gap-3 rounded-xl px-3 py-2.5 transition-colors',
-                  isActive
-                    ? 'bg-brand-600 text-white'
-                    : 'text-slate-300 hover:bg-white/5 hover:text-white',
-                )
-              }
+              className={linkClass}
             >
               {({ isActive }) => (
                 <>
@@ -67,10 +79,7 @@ export function Sidebar({ mobileOpen, onClose }: SidebarProps) {
                   <span>
                     <span className="block text-sm font-medium">{item.label}</span>
                     <span
-                      className={cx(
-                        'block text-xs',
-                        isActive ? 'text-brand-100' : 'text-slate-500',
-                      )}
+                      className={cx('block text-xs', isActive ? 'text-brand-100' : 'text-slate-500')}
                     >
                       {item.description}
                     </span>
@@ -79,19 +88,65 @@ export function Sidebar({ mobileOpen, onClose }: SidebarProps) {
               )}
             </NavLink>
           ))}
+
+          {/* Admin-only */}
+          {isAdmin && (
+            <>
+              <p className="px-3 pb-1 pt-4 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                Admin
+              </p>
+              <NavLink to="/admin/users" onClick={onClose} className={linkClass}>
+                {({ isActive }) => (
+                  <>
+                    <UserCog
+                      size={19}
+                      className={cx(
+                        'mt-0.5 shrink-0',
+                        isActive ? 'text-white' : 'text-slate-400 group-hover:text-white',
+                      )}
+                    />
+                    <span>
+                      <span className="block text-sm font-medium">User Management</span>
+                      <span
+                        className={cx('block text-xs', isActive ? 'text-brand-100' : 'text-slate-500')}
+                      >
+                        Add &amp; manage users
+                      </span>
+                    </span>
+                  </>
+                )}
+              </NavLink>
+            </>
+          )}
         </nav>
 
         <div className="border-t border-white/10 px-4 py-4">
           <div className="flex items-center gap-3 rounded-xl bg-white/5 px-3 py-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-500 text-sm font-semibold text-white">
-              {currentAdvisor.avatarInitials}
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-500 text-sm font-semibold text-white">
+              {initials(user?.fullName ?? 'User')}
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium text-white">
-                {currentAdvisor.name}
+                {user?.fullName ?? 'User'}
               </p>
-              <p className="truncate text-xs text-slate-400">{currentAdvisor.firm}</p>
+              <p className="truncate text-xs text-slate-400">
+                {isAdmin ? 'Administrator' : (user?.firm ?? user?.email)}
+              </p>
             </div>
+            {authEnabled ? (
+              <button
+                onClick={handleSignOut}
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-white/10 hover:text-white"
+                aria-label="Sign out"
+                title="Sign out"
+              >
+                <LogOut size={17} />
+              </button>
+            ) : (
+              <span className="rounded-md bg-amber-400/20 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-amber-300">
+                Demo
+              </span>
+            )}
           </div>
         </div>
       </aside>

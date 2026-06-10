@@ -4,6 +4,9 @@ dist-ssr
 *.tsbuildinfo
 vite.config.ts.timestamp-*.mjs
 *.local
+.env
+.env.*
+!.env.example
 .DS_Store
 .vite
 npm-debug.log*
