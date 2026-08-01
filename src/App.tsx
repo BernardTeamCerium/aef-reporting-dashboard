@@ -7,6 +7,9 @@ import { PrintOrders } from './pages/PrintOrders'
 import { Seo } from './pages/Seo'
 import { Support } from './pages/Support'
 import { Login } from './pages/Login'
+import { Reviews } from './pages/Reviews'
+import { Clients } from './pages/Clients'
+import { ReviewCollect } from './pages/public/ReviewCollect'
 import { AdminUsers } from './pages/admin/Users'
 import { AdminProgress } from './pages/admin/Progress'
 
@@ -14,11 +17,15 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      {/* Public, no-auth review collection page */}
+      <Route path="/r/:slug" element={<ReviewCollect />} />
       <Route element={<ProtectedRoute />}>
         <Route element={<Layout />}>
           <Route index element={<Dashboard />} />
           <Route path="/content" element={<ContentApprovals />} />
           <Route path="/print" element={<PrintOrders />} />
+          <Route path="/reviews" element={<Reviews />} />
+          <Route path="/clients" element={<Clients />} />
           <Route path="/seo" element={<Seo />} />
           <Route path="/support" element={<Support />} />
           <Route element={<RequireAdmin />}>

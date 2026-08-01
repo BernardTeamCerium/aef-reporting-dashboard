@@ -3,7 +3,9 @@ import {
   LayoutDashboard,
   LifeBuoy,
   Printer,
+  Star,
   TrendingUp,
+  Users,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -32,6 +34,18 @@ export const navItems: NavItem[] = [
     label: 'Print Orders',
     icon: Printer,
     description: 'Order materials & track jobs',
+  },
+  {
+    to: '/reviews',
+    label: 'Reviews',
+    icon: Star,
+    description: 'Collect reviews & testimonials',
+  },
+  {
+    to: '/clients',
+    label: 'Clients',
+    icon: Users,
+    description: 'Profiles, birthdays & greetings',
   },
   {
     to: '/seo',
