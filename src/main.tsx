@@ -5,6 +5,7 @@ import App from './App.tsx'
 import { AppStateProvider } from './state/AppState.tsx'
 import { AuthProvider } from './state/Auth.tsx'
 import { ClientsProvider } from './state/Clients.tsx'
+import { AdvisorsProvider } from './state/Advisors.tsx'
 import { ToastProvider } from './components/ui/Toast.tsx'
 import './index.css'
 
@@ -12,13 +13,15 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
       <ToastProvider>
-        <ClientsProvider>
-          <AuthProvider>
-            <AppStateProvider>
-              <App />
-            </AppStateProvider>
-          </AuthProvider>
-        </ClientsProvider>
+        <AuthProvider>
+          <AdvisorsProvider>
+            <ClientsProvider>
+              <AppStateProvider>
+                <App />
+              </AppStateProvider>
+            </ClientsProvider>
+          </AdvisorsProvider>
+        </AuthProvider>
       </ToastProvider>
     </BrowserRouter>
   </StrictMode>,

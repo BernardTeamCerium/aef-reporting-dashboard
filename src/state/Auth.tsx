@@ -11,6 +11,7 @@ import {
   adminEmail,
   isAuthEnabled,
   supabase,
+  type AppRole,
   type AppUser,
 } from '../lib/supabase'
 
@@ -19,32 +20,63 @@ interface AuthContextValue {
   loading: boolean
   /** Whether a real Supabase backend is configured. */
   authEnabled: boolean
-  /** True when running open (no backend) — everyone is treated as admin. */
+  /** True when running open (no backend). */
   demoMode: boolean
   user: AppUser | null
   isAdmin: boolean
+  /** Demo-only: lets you preview both the admin and advisor experiences. */
+  canSwitchRole: boolean
+  demoRole: AppRole
+  setDemoRole: (role: AppRole) => void
   signInWithPassword: (email: string, password: string) => Promise<{ error?: string }>
   signOut: () => Promise<void>
-  /** Bearer token for calling the serverless admin API; null in demo mode. */
   getAccessToken: () => Promise<string | null>
   refreshProfile: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
-const demoUser: AppUser = {
-  id: 'demo-admin',
-  email: adminEmail,
-  fullName: 'Demo Admin',
-  role: 'admin',
+const DEMO_ROLE_KEY = 'onestop.demo.role'
+
+function demoUserFor(role: AppRole): AppUser {
+  return role === 'admin'
+    ? { id: 'demo-admin', email: adminEmail, fullName: 'Demo Admin', role: 'admin' }
+    : {
+        id: 'demo-advisor',
+        email: 'renzofrazier@gmail.com',
+        fullName: 'Renzo Frazier',
+        role: 'advisor',
+        firm: 'Frazier Wealth Partners',
+      }
+}
+
+function initialDemoRole(): AppRole {
+  try {
+    const saved = localStorage.getItem(DEMO_ROLE_KEY)
+    if (saved === 'admin' || saved === 'advisor') return saved
+  } catch {
+    /* ignore */
+  }
+  return 'admin'
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  // In demo mode we resolve immediately as the demo admin.
-  const [user, setUser] = useState<AppUser | null>(isAuthEnabled ? null : demoUser)
+  const [demoRole, setDemoRoleState] = useState<AppRole>(initialDemoRole)
+  const [user, setUser] = useState<AppUser | null>(
+    isAuthEnabled ? null : demoUserFor(initialDemoRole()),
+  )
   const [loading, setLoading] = useState(isAuthEnabled)
 
-  // Map a Supabase auth user + profile row into our AppUser shape.
+  const setDemoRole = useCallback((role: AppRole) => {
+    setDemoRoleState(role)
+    try {
+      localStorage.setItem(DEMO_ROLE_KEY, role)
+    } catch {
+      /* ignore */
+    }
+    if (!isAuthEnabled) setUser(demoUserFor(role))
+  }, [])
+
   const loadProfile = useCallback(async (): Promise<AppUser | null> => {
     if (!supabase) return null
     const { data: auth } = await supabase.auth.getUser()
@@ -75,12 +107,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!supabase) return
     let active = true
 
-    // Resolve the current session on load.
     loadProfile()
       .then((u) => active && setUser(u))
       .finally(() => active && setLoading(false))
 
-    // Keep in sync with sign-in / sign-out / token refresh.
     const { data: sub } = supabase.auth.onAuthStateChange(() => {
       loadProfile().then((u) => active && setUser(u))
     })
@@ -121,12 +151,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       demoMode: !isAuthEnabled,
       user,
       isAdmin: user?.role === 'admin',
+      canSwitchRole: !isAuthEnabled,
+      demoRole,
+      setDemoRole,
       signInWithPassword,
       signOut,
       getAccessToken,
       refreshProfile,
     }),
-    [loading, user, signInWithPassword, signOut, getAccessToken, refreshProfile],
+    [loading, user, demoRole, setDemoRole, signInWithPassword, signOut, getAccessToken, refreshProfile],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
