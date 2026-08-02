@@ -8,9 +8,9 @@ const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 export const isAuthEnabled = Boolean(url && anonKey)
 
-/** The configured admin email (defaults to the project owner). */
+/** The configured admin email (defaults to the OneStop team address). */
 export const adminEmail =
-  import.meta.env.VITE_ADMIN_EMAIL ?? 'bernard@teamcerium.com'
+  import.meta.env.VITE_ADMIN_EMAIL ?? 'team@onestopprintco.com'
 
 // Only construct a real client when configured; otherwise it's null and the
 // AuthProvider falls back to demo mode.
