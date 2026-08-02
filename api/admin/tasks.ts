@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { getServiceClient, HttpError, requireAdmin } from '../_lib'
+import { getServiceClient, HttpError, requireAdmin } from '../_lib.js'
 
 interface TaskRow {
   id: string

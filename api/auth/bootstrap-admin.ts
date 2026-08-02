@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { ADMIN_EMAIL, getServiceClient, HttpError } from '../_lib'
+import { ADMIN_EMAIL, getServiceClient, HttpError } from '../_lib.js'
 
 // One-time: creates the admin account by letting the configured admin email
 // choose its password on first login. Refuses once an admin already exists.

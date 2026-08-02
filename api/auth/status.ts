@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { ADMIN_EMAIL, getServiceClient, HttpError } from '../_lib'
+import { ADMIN_EMAIL, getServiceClient, HttpError } from '../_lib.js'
 
 // Public: tells the login screen whether the admin account has been created yet.
 export default async function handler(_req: VercelRequest, res: VercelResponse) {
