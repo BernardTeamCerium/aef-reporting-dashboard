@@ -6,7 +6,7 @@ import type { VercelRequest } from '@vercel/node'
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-export const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'bernard@teamcerium.com'
+export const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'team@onestopprintco.com'
 
 export class HttpError extends Error {
   status: number
