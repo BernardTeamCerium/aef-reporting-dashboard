@@ -4,7 +4,7 @@ import {
   getServiceClient,
   HttpError,
   requireAdmin,
-} from '../_lib'
+} from '../_lib.js'
 
 interface ProfileRow {
   id: string
