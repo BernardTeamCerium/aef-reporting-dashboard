@@ -52,6 +52,22 @@ export async function requireAdmin(req: VercelRequest, svc: SupabaseClient) {
   return data.user
 }
 
+/**
+ * Extract a readable message from anything thrown. Supabase/Postgrest errors
+ * are plain objects (not Error instances), so we check for a `message` field
+ * and append the error `code` when present.
+ */
+export function errorMessage(e: unknown): string {
+  if (e instanceof Error) return e.message
+  if (e && typeof e === 'object') {
+    const o = e as Record<string, unknown>
+    if (typeof o.message === 'string') {
+      return typeof o.code === 'string' ? `${o.message} (${o.code})` : o.message
+    }
+  }
+  return 'Unknown error'
+}
+
 export function generateTempPassword(): string {
   return (
     'OS-' +

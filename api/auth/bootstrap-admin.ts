@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { ADMIN_EMAIL, getServiceClient, HttpError } from '../_lib.js'
+import { ADMIN_EMAIL, errorMessage, getServiceClient, HttpError } from '../_lib.js'
 
 // One-time: creates the admin account by letting the configured admin email
 // choose its password on first login. Refuses once an admin already exists.
@@ -50,6 +50,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.status(200).json({ ok: true })
   } catch (e) {
     const status = e instanceof HttpError ? e.status : 500
-    res.status(status).json({ error: e instanceof Error ? e.message : 'Unknown error' })
+    res.status(status).json({ error: errorMessage(e) })
   }
 }

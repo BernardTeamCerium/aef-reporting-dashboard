@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { getServiceClient, HttpError, requireAdmin } from '../_lib.js'
+import { errorMessage, getServiceClient, HttpError, requireAdmin } from '../_lib.js'
 
 interface TaskRow {
   id: string
@@ -97,6 +97,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' })
   } catch (e) {
     const status = e instanceof HttpError ? e.status : 500
-    res.status(status).json({ error: e instanceof Error ? e.message : 'Unknown error' })
+    res.status(status).json({ error: errorMessage(e) })
   }
 }
