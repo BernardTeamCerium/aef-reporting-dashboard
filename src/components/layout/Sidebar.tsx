@@ -1,6 +1,7 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import {
   Briefcase,
+  LayoutDashboard,
   ListChecks,
   LogOut,
   UserCog,
@@ -28,10 +29,17 @@ interface AdminNavItem {
 const adminNav: AdminNavItem[] = [
   {
     to: '/admin',
+    label: 'Overview',
+    description: 'Activity across all advisors',
+    icon: LayoutDashboard,
+    isActive: (p) => p === '/admin',
+  },
+  {
+    to: '/admin/advisors',
     label: 'Advisors',
-    description: 'Manage advisors & clients',
+    description: 'Profiles, content, clients',
     icon: Briefcase,
-    isActive: (p) => p === '/admin' || p.startsWith('/admin/advisors'),
+    isActive: (p) => p.startsWith('/admin/advisors'),
   },
   {
     to: '/admin/progress',

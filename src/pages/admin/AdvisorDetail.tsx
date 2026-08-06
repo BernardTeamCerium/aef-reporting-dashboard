@@ -3,54 +3,78 @@ import { Link, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
   CalendarCheck,
+  Copy,
   ExternalLink,
   Gauge,
+  LifeBuoy,
+  Link2,
   Mail,
+  Package,
   Phone,
   Plus,
   Star,
   Trash2,
   TrendingUp,
+  Upload,
   UserPlus,
   Users,
 } from 'lucide-react'
 import { Card, CardHeader } from '../../components/ui/Card'
 import { Badge } from '../../components/ui/Badge'
+import type { BadgeTone } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Modal } from '../../components/ui/Modal'
 import { useToast } from '../../components/ui/Toast'
-import { useAdvisors } from '../../state/Advisors'
+import { useAdvisors, type AdvisorContent } from '../../state/Advisors'
 import { initialsOf } from '../../lib/reviewsUtil'
-import { formatDate, cx } from '../../lib/format'
+import { formatCurrency, formatDate, cx } from '../../lib/format'
 
-type Tab = 'overview' | 'clients' | 'reviews'
+type Tab = 'overview' | 'content' | 'orders' | 'support' | 'clients' | 'reviews'
+
+const contentStatusMeta: Record<AdvisorContent['status'], { label: string; tone: BadgeTone }> = {
+  pending: { label: 'Awaiting approval', tone: 'amber' },
+  approved: { label: 'Approved', tone: 'green' },
+  changes_requested: { label: 'Changes requested', tone: 'red' },
+}
+
+const origin = typeof window !== 'undefined' ? window.location.origin : ''
 
 export function AdvisorDetail() {
   const { id = '' } = useParams()
-  const { getAdvisor, addClientTo, removeClientFrom } = useAdvisors()
+  const { getAdvisor, addClientTo, removeClientFrom, addContentTo, removeContentFrom } = useAdvisors()
   const notify = useToast()
   const advisor = getAdvisor(id)
   const [tab, setTab] = useState<Tab>('overview')
-  const [addOpen, setAddOpen] = useState(false)
+  const [addClientOpen, setAddClientOpen] = useState(false)
+  const [uploadOpen, setUploadOpen] = useState(false)
 
   if (!advisor) {
     return (
       <Card className="p-10 text-center text-sm text-slate-500">
-        Advisor not found. <Link to="/admin" className="font-semibold text-brand-600">Back to advisors</Link>
+        Advisor not found. <Link to="/admin/advisors" className="font-semibold text-brand-600">Back to advisors</Link>
       </Card>
     )
   }
 
   const m = advisor.metrics
+  const reviewUrl = origin + advisor.reviewLink
+  const pendingContent = advisor.content.filter((c) => c.status === 'pending').length
+  const openSupport = advisor.support.filter((s) => s.status !== 'resolved').length
+
   const tabs: { key: Tab; label: string }[] = [
     { key: 'overview', label: 'Overview' },
+    { key: 'content', label: `Content${pendingContent ? ` (${pendingContent})` : ''}` },
+    { key: 'orders', label: `Orders (${advisor.orders.length})` },
+    { key: 'support', label: `Support${openSupport ? ` (${openSupport})` : ''}` },
     { key: 'clients', label: `Clients (${advisor.clients.length})` },
     { key: 'reviews', label: `Reviews (${advisor.reviews.length})` },
   ]
 
+  const maxTraffic = Math.max(1, ...advisor.trafficSources.map((t) => t.visitors))
+
   return (
     <div className="space-y-5">
-      <Link to="/admin" className="inline-flex items-center gap-1 text-sm font-medium text-slate-500 hover:text-slate-700">
+      <Link to="/admin/advisors" className="inline-flex items-center gap-1 text-sm font-medium text-slate-500 hover:text-slate-700">
         <ArrowLeft size={15} /> All advisors
       </Link>
 
@@ -63,21 +87,15 @@ export function AdvisorDetail() {
             </span>
             <div>
               <h2 className="text-lg font-semibold text-slate-900">{advisor.firm}</h2>
-              <p className="text-sm text-slate-500">
-                {advisor.name} · Managed by {advisor.accountManager}
-              </p>
+              <p className="text-sm text-slate-500">{advisor.name} · Managed by {advisor.accountManager}</p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Badge tone={advisor.status === 'active' ? 'green' : 'amber'}>
-              {advisor.status === 'active' ? 'Active' : 'Paused'}
-            </Badge>
+            <Badge tone={advisor.status === 'active' ? 'green' : 'amber'}>{advisor.status === 'active' ? 'Active' : 'Paused'}</Badge>
             <Badge tone="purple">{advisor.plan}</Badge>
             {advisor.website && (
               <a href={`https://${advisor.website}`} target="_blank" rel="noreferrer">
-                <Button size="sm" variant="secondary">
-                  {advisor.website} <ExternalLink size={13} />
-                </Button>
+                <Button size="sm" variant="secondary">{advisor.website} <ExternalLink size={13} /></Button>
               </a>
             )}
           </div>
@@ -90,16 +108,14 @@ export function AdvisorDetail() {
       </Card>
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b border-slate-200">
+      <div className="flex flex-wrap gap-1 border-b border-slate-200">
         {tabs.map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
             className={cx(
               '-mb-px border-b-2 px-3 py-2 text-sm font-medium transition-colors',
-              tab === t.key
-                ? 'border-brand-600 text-brand-700'
-                : 'border-transparent text-slate-500 hover:text-slate-700',
+              tab === t.key ? 'border-brand-600 text-brand-700' : 'border-transparent text-slate-500 hover:text-slate-700',
             )}
           >
             {t.label}
@@ -115,17 +131,146 @@ export function AdvisorDetail() {
             <Metric icon={<CalendarCheck size={18} />} value={m.appointments} label="Appointments" />
             <Metric icon={<Gauge size={18} />} value={`${m.seoScore}/100`} label="SEO score" />
           </div>
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <Metric icon={<Star size={18} />} value={m.avgRating || '—'} label="Avg rating" />
-            <Metric icon={<Star size={18} />} value={m.reviews} label="Reviews" />
-            <Metric icon={<Users size={18} />} value={advisor.clients.length} label="Clients" />
+
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            {/* Review link + key links */}
+            <Card>
+              <CardHeader title="Key links" subtitle="Share these with the advisor" icon={<Link2 size={18} />} />
+              <div className="space-y-3 p-5">
+                <div>
+                  <p className="text-xs font-medium text-slate-500">Review collection link</p>
+                  <div className="mt-1 flex items-center gap-2">
+                    <code className="flex-1 truncate rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">{reviewUrl}</code>
+                    <button
+                      onClick={() => { navigator.clipboard?.writeText(reviewUrl); notify('Review link copied.') }}
+                      className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                      aria-label="Copy review link"
+                    >
+                      <Copy size={15} />
+                    </button>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
+                  <span className="text-sm text-slate-600">Website</span>
+                  {advisor.website ? (
+                    <a href={`https://${advisor.website}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-sm font-medium text-brand-600">
+                      {advisor.website} <ExternalLink size={13} />
+                    </a>
+                  ) : <span className="text-sm text-slate-400">—</span>}
+                </div>
+                <div className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
+                  <span className="text-sm text-slate-600">Avg. rating</span>
+                  <span className="inline-flex items-center gap-1 text-sm font-medium text-slate-800">
+                    <Star size={13} className="fill-amber-400 text-amber-400" /> {m.avgRating || '—'} ({m.reviews})
+                  </span>
+                </div>
+              </div>
+            </Card>
+
+            {/* Traffic */}
+            <Card>
+              <CardHeader title="Traffic sources" subtitle="Where their visitors come from" icon={<TrendingUp size={18} />} />
+              <div className="space-y-2.5 p-5">
+                {advisor.trafficSources.length === 0 && <p className="text-sm text-slate-400">No traffic data yet.</p>}
+                {advisor.trafficSources.map((t) => (
+                  <div key={t.source}>
+                    <div className="mb-1 flex justify-between text-xs text-slate-500">
+                      <span>{t.source}</span>
+                      <span>{t.visitors.toLocaleString()}</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-slate-100">
+                      <div className="h-2 rounded-full bg-brand-500" style={{ width: `${(t.visitors / maxTraffic) * 100}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
           </div>
-          <Card className="p-5 text-sm text-slate-500">
-            This is the advisor's data as they see it in their own dashboard. When{' '}
-            <span className="font-medium text-slate-700">{advisor.name}</span> signs in, they land on
-            their personal dashboard with these tools and analytics — scoped to just their firm.
-          </Card>
         </div>
+      )}
+
+      {tab === 'content' && (
+        <Card>
+          <CardHeader
+            title="Content"
+            subtitle="Upload posts for this advisor to review & approve"
+            icon={<CalendarCheck size={18} />}
+            action={<Button size="sm" onClick={() => setUploadOpen(true)}><Upload size={14} /> Upload content</Button>}
+          />
+          <div className="divide-y divide-slate-100">
+            {advisor.content.map((c) => (
+              <div key={c.id} className="flex items-start justify-between gap-3 px-5 py-3">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-sm font-medium text-slate-800">{c.title}</p>
+                    <Badge tone="blue">{c.channel}</Badge>
+                  </div>
+                  <p className="mt-0.5 line-clamp-2 text-sm text-slate-500">{c.body}</p>
+                  <p className="mt-1 text-xs text-slate-400">Scheduled {formatDate(c.scheduledFor)}</p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <Badge tone={contentStatusMeta[c.status].tone}>{contentStatusMeta[c.status].label}</Badge>
+                  <button onClick={() => { removeContentFrom(advisor.id, c.id); notify('Content removed.') }} className="rounded-lg p-1.5 text-slate-300 hover:bg-rose-50 hover:text-rose-600" aria-label="Remove">
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              </div>
+            ))}
+            {advisor.content.length === 0 && <p className="px-5 py-10 text-center text-sm text-slate-400">No content uploaded yet.</p>}
+          </div>
+        </Card>
+      )}
+
+      {tab === 'orders' && (
+        <Card>
+          <CardHeader title="Orders" subtitle="Print & additional service orders" icon={<Package size={18} />} />
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-100 text-left text-xs uppercase tracking-wide text-slate-400">
+                  <th className="px-5 py-3 font-medium">Item</th>
+                  <th className="px-5 py-3 font-medium">Category</th>
+                  <th className="px-5 py-3 font-medium">Submitted</th>
+                  <th className="px-5 py-3 font-medium">Cost</th>
+                  <th className="px-5 py-3 font-medium">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {advisor.orders.map((o) => (
+                  <tr key={o.id} className="hover:bg-slate-50">
+                    <td className="px-5 py-3 font-medium text-slate-800">{o.item}{o.quantity ? ` (${o.quantity.toLocaleString()})` : ''}</td>
+                    <td className="px-5 py-3 text-slate-500">{o.category}</td>
+                    <td className="px-5 py-3 text-slate-500">{formatDate(o.submittedOn)}</td>
+                    <td className="px-5 py-3 text-slate-600">{formatCurrency(o.cost)}</td>
+                    <td className="px-5 py-3"><Badge tone="purple">{o.status.replace('_', ' ')}</Badge></td>
+                  </tr>
+                ))}
+                {advisor.orders.length === 0 && <tr><td colSpan={5} className="px-5 py-10 text-center text-sm text-slate-400">No orders yet.</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+
+      {tab === 'support' && (
+        <Card>
+          <CardHeader title="Support requests" subtitle="Digital, print, website & marketing help" icon={<LifeBuoy size={18} />} />
+          <div className="divide-y divide-slate-100">
+            {advisor.support.map((s) => (
+              <div key={s.id} className="flex items-center justify-between gap-3 px-5 py-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-slate-800">{s.subject}</p>
+                  <p className="text-xs text-slate-500">{s.type} · Opened {formatDate(s.createdOn)}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge tone={s.priority === 'high' || s.priority === 'urgent' ? 'red' : 'gray'}>{s.priority}</Badge>
+                  <Badge tone={s.status === 'resolved' ? 'green' : s.status === 'in_progress' ? 'amber' : 'blue'}>{s.status.replace('_', ' ')}</Badge>
+                </div>
+              </div>
+            ))}
+            {advisor.support.length === 0 && <p className="px-5 py-10 text-center text-sm text-slate-400">No support requests.</p>}
+          </div>
+        </Card>
       )}
 
       {tab === 'clients' && (
@@ -134,11 +279,7 @@ export function AdvisorDetail() {
             title="Client book"
             subtitle={`${advisor.clients.length} clients for ${advisor.firm}`}
             icon={<Users size={18} />}
-            action={
-              <Button size="sm" onClick={() => setAddOpen(true)}>
-                <UserPlus size={14} /> Add client
-              </Button>
-            }
+            action={<Button size="sm" onClick={() => setAddClientOpen(true)}><UserPlus size={14} /> Add client</Button>}
           />
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -159,35 +300,16 @@ export function AdvisorDetail() {
                       <div className="text-xs text-slate-400">{c.phone || '—'}</div>
                     </td>
                     <td className="px-5 py-3">
-                      {c.reviewStatus === 'reviewed' ? (
-                        <Badge tone="green">Reviewed</Badge>
-                      ) : c.reviewStatus === 'requested' ? (
-                        <Badge tone="amber">Requested</Badge>
-                      ) : (
-                        <Badge tone="gray">None</Badge>
-                      )}
+                      {c.reviewStatus === 'reviewed' ? <Badge tone="green">Reviewed</Badge> : c.reviewStatus === 'requested' ? <Badge tone="amber">Requested</Badge> : <Badge tone="gray">None</Badge>}
                     </td>
                     <td className="px-5 py-3 text-right">
-                      <button
-                        onClick={() => {
-                          removeClientFrom(advisor.id, c.id)
-                          notify(`Removed ${c.name}.`)
-                        }}
-                        className="rounded-lg p-1.5 text-slate-300 hover:bg-rose-50 hover:text-rose-600"
-                        aria-label={`Remove ${c.name}`}
-                      >
+                      <button onClick={() => { removeClientFrom(advisor.id, c.id); notify(`Removed ${c.name}.`) }} className="rounded-lg p-1.5 text-slate-300 hover:bg-rose-50 hover:text-rose-600" aria-label={`Remove ${c.name}`}>
                         <Trash2 size={16} />
                       </button>
                     </td>
                   </tr>
                 ))}
-                {advisor.clients.length === 0 && (
-                  <tr>
-                    <td colSpan={4} className="px-5 py-10 text-center text-sm text-slate-400">
-                      No clients yet for this advisor.
-                    </td>
-                  </tr>
-                )}
+                {advisor.clients.length === 0 && <tr><td colSpan={4} className="px-5 py-10 text-center text-sm text-slate-400">No clients yet.</td></tr>}
               </tbody>
             </table>
           </div>
@@ -201,9 +323,7 @@ export function AdvisorDetail() {
               <div className="mb-2 flex items-center justify-between">
                 <p className="text-sm font-medium text-slate-800">{r.clientName}</p>
                 <div className="flex gap-0.5">
-                  {[1, 2, 3, 4, 5].map((n) => (
-                    <Star key={n} size={13} className={n <= (r.rating ?? 0) ? 'fill-amber-400 text-amber-400' : 'fill-slate-100 text-slate-300'} />
-                  ))}
+                  {[1, 2, 3, 4, 5].map((n) => <Star key={n} size={13} className={n <= (r.rating ?? 0) ? 'fill-amber-400 text-amber-400' : 'fill-slate-100 text-slate-300'} />)}
                 </div>
               </div>
               <p className="text-sm text-slate-600">“{r.text}”</p>
@@ -213,21 +333,15 @@ export function AdvisorDetail() {
               </div>
             </Card>
           ))}
-          {advisor.reviews.length === 0 && (
-            <Card className="p-10 text-center text-sm text-slate-400 md:col-span-2">
-              No reviews collected yet.
-            </Card>
-          )}
+          {advisor.reviews.length === 0 && <Card className="p-10 text-center text-sm text-slate-400 md:col-span-2">No reviews collected yet.</Card>}
         </div>
       )}
 
-      <AddClientModal
-        open={addOpen}
-        onClose={() => setAddOpen(false)}
-        onAdd={(input) => {
-          addClientTo(advisor.id, input)
-          notify(`${input.name} added to ${advisor.firm}.`)
-        }}
+      <AddClientModal open={addClientOpen} onClose={() => setAddClientOpen(false)} onAdd={(input) => { addClientTo(advisor.id, input); notify(`${input.name} added.`) }} />
+      <UploadContentModal
+        open={uploadOpen}
+        onClose={() => setUploadOpen(false)}
+        onUpload={(input) => { addContentTo(advisor.id, input); notify(`"${input.title}" pushed to ${advisor.firm} for approval.`) }}
       />
     </div>
   )
@@ -240,6 +354,66 @@ function Metric({ icon, value, label }: { icon: React.ReactNode; value: number |
       <p className="mt-2.5 text-2xl font-bold tracking-tight text-slate-900">{value}</p>
       <p className="text-xs text-slate-500">{label}</p>
     </Card>
+  )
+}
+
+function UploadContentModal({
+  open,
+  onClose,
+  onUpload,
+}: {
+  open: boolean
+  onClose: () => void
+  onUpload: (input: { title: string; channel: AdvisorContent['channel']; scheduledFor: string; body: string }) => void
+}) {
+  const [title, setTitle] = useState('')
+  const [channel, setChannel] = useState<AdvisorContent['channel']>('LinkedIn')
+  const [scheduledFor, setScheduledFor] = useState('')
+  const [body, setBody] = useState('')
+  const [err, setErr] = useState<string | null>(null)
+
+  const channels: AdvisorContent['channel'][] = ['LinkedIn', 'Facebook', 'Instagram', 'Blog', 'Email']
+
+  const submit = () => {
+    if (!title.trim() || !body.trim()) { setErr('Title and content are required.'); return }
+    onUpload({ title: title.trim(), channel, scheduledFor: scheduledFor || new Date().toISOString().slice(0, 10), body: body.trim() })
+    setTitle(''); setChannel('LinkedIn'); setScheduledFor(''); setBody(''); setErr(null)
+    onClose()
+  }
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Upload content"
+      subtitle="This goes to the advisor's dashboard for them to approve."
+      size="lg"
+      footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button onClick={submit}><Upload size={16} /> Push for approval</Button></>}
+    >
+      <div className="space-y-4">
+        <label className="block">
+          <span className="mb-1 block text-sm font-medium text-slate-700">Title</span>
+          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Mid-Year Market Check-In" className={inputCls} />
+        </label>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <label className="block">
+            <span className="mb-1 block text-sm font-medium text-slate-700">Channel</span>
+            <select value={channel} onChange={(e) => setChannel(e.target.value as AdvisorContent['channel'])} className={inputCls}>
+              {channels.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-sm font-medium text-slate-700">Scheduled date</span>
+            <input type="date" value={scheduledFor} onChange={(e) => setScheduledFor(e.target.value)} className={inputCls} />
+          </label>
+        </div>
+        <label className="block">
+          <span className="mb-1 block text-sm font-medium text-slate-700">Content</span>
+          <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={5} placeholder="Write the post copy…" className={cx(inputCls, 'resize-none')} />
+        </label>
+        {err && <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700">{err}</p>}
+      </div>
+    </Modal>
   )
 }
 
@@ -259,16 +433,9 @@ function AddClientModal({
   const [err, setErr] = useState<string | null>(null)
 
   const submit = () => {
-    if (!name.trim()) {
-      setErr('Name is required.')
-      return
-    }
+    if (!name.trim()) { setErr('Name is required.'); return }
     onAdd({ name: name.trim(), email: email.trim(), phone: phone.trim(), birthday: birthday || undefined })
-    setName('')
-    setEmail('')
-    setPhone('')
-    setBirthday('')
-    setErr(null)
+    setName(''); setEmail(''); setPhone(''); setBirthday(''); setErr(null)
     onClose()
   }
 
@@ -278,12 +445,7 @@ function AddClientModal({
       onClose={onClose}
       title="Add client"
       subtitle="Add a client to this advisor's book."
-      footer={
-        <>
-          <Button variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button onClick={submit}><Plus size={16} /> Add client</Button>
-        </>
-      }
+      footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button onClick={submit}><Plus size={16} /> Add client</Button></>}
     >
       <div className="space-y-4">
         <label className="block">
