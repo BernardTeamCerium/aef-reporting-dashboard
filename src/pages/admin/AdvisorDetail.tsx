@@ -26,10 +26,11 @@ import { Button } from '../../components/ui/Button'
 import { Modal } from '../../components/ui/Modal'
 import { useToast } from '../../components/ui/Toast'
 import { useAdvisors, type AdvisorContent } from '../../state/Advisors'
+import { AdvisorAnalytics } from './AdvisorAnalytics'
 import { initialsOf } from '../../lib/reviewsUtil'
 import { formatCurrency, formatDate, cx } from '../../lib/format'
 
-type Tab = 'overview' | 'content' | 'orders' | 'support' | 'clients' | 'reviews'
+type Tab = 'overview' | 'analytics' | 'content' | 'orders' | 'support' | 'clients' | 'reviews'
 
 const contentStatusMeta: Record<AdvisorContent['status'], { label: string; tone: BadgeTone }> = {
   pending: { label: 'Awaiting approval', tone: 'amber' },
@@ -63,6 +64,7 @@ export function AdvisorDetail() {
 
   const tabs: { key: Tab; label: string }[] = [
     { key: 'overview', label: 'Overview' },
+    { key: 'analytics', label: 'Analytics' },
     { key: 'content', label: `Content${pendingContent ? ` (${pendingContent})` : ''}` },
     { key: 'orders', label: `Orders (${advisor.orders.length})` },
     { key: 'support', label: `Support${openSupport ? ` (${openSupport})` : ''}` },
@@ -188,6 +190,8 @@ export function AdvisorDetail() {
           </div>
         </div>
       )}
+
+      {tab === 'analytics' && <AdvisorAnalytics advisor={advisor} />}
 
       {tab === 'content' && (
         <Card>
