@@ -12,6 +12,7 @@ import { Clients } from './pages/Clients'
 import { ReviewCollect } from './pages/public/ReviewCollect'
 import { AdminUsers } from './pages/admin/Users'
 import { AdminProgress } from './pages/admin/Progress'
+import { AdminOverview } from './pages/admin/Overview'
 import { AdminAdvisors } from './pages/admin/Advisors'
 import { AdvisorDetail } from './pages/admin/AdvisorDetail'
 import { useAuth } from './state/Auth'
@@ -38,7 +39,8 @@ export default function App() {
           <Route path="/seo" element={<Seo />} />
           <Route path="/support" element={<Support />} />
           <Route element={<RequireAdmin />}>
-            <Route path="/admin" element={<AdminAdvisors />} />
+            <Route path="/admin" element={<AdminOverview />} />
+            <Route path="/admin/advisors" element={<AdminAdvisors />} />
             <Route path="/admin/advisors/:id" element={<AdvisorDetail />} />
             <Route path="/admin/progress" element={<AdminProgress />} />
             <Route path="/admin/users" element={<AdminUsers />} />

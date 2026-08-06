@@ -26,6 +26,38 @@ export interface AdvisorMetrics {
   seoScore: number
 }
 
+export type ContentStatus = 'pending' | 'approved' | 'changes_requested'
+export interface AdvisorContent {
+  id: string
+  title: string
+  channel: 'Facebook' | 'LinkedIn' | 'Instagram' | 'Blog' | 'Email'
+  scheduledFor: string
+  status: ContentStatus
+  body: string
+  uploadedOn: string
+}
+
+export type ServiceOrderStatus = 'submitted' | 'in_production' | 'shipped' | 'delivered'
+export interface AdvisorServiceOrder {
+  id: string
+  item: string
+  category: string
+  quantity?: number
+  status: ServiceOrderStatus
+  submittedOn: string
+  cost: number
+}
+
+export type SupportReqStatus = 'open' | 'in_progress' | 'resolved'
+export interface AdvisorSupportReq {
+  id: string
+  subject: string
+  type: string
+  priority: 'low' | 'normal' | 'high' | 'urgent'
+  status: SupportReqStatus
+  createdOn: string
+}
+
 export interface AdvisorAccount {
   id: string
   name: string
@@ -37,9 +69,14 @@ export interface AdvisorAccount {
   status: AdvisorStatus
   joinedDate: string
   accountManager: string
+  reviewLink: string
   metrics: AdvisorMetrics
+  trafficSources: { source: string; visitors: number }[]
   clients: Client[]
   reviews: CustomerReview[]
+  content: AdvisorContent[]
+  orders: AdvisorServiceOrder[]
+  support: AdvisorSupportReq[]
 }
 
 export interface NewAdvisorInput {
@@ -60,6 +97,11 @@ interface AdvisorsValue {
   removeAdvisor: (id: string) => void
   addClientTo: (advisorId: string, client: Omit<Client, 'id' | 'createdAt' | 'reviewStatus' | 'greetings'> & { greetings?: Client['greetings'] }) => void
   removeClientFrom: (advisorId: string, clientId: string) => void
+  addContentTo: (
+    advisorId: string,
+    content: { title: string; channel: AdvisorContent['channel']; scheduledFor: string; body: string },
+  ) => void
+  removeContentFrom: (advisorId: string, contentId: string) => void
 }
 
 const AdvisorsContext = createContext<AdvisorsValue | null>(null)
@@ -70,7 +112,10 @@ const rid = (p: string) => p + Math.random().toString(36).slice(2, 9)
 
 const g = (_birthday?: string): Client['greetings'] => ({ birthday: true, holidays: true })
 
-const seed: AdvisorAccount[] = [
+const seedRaw: Omit<
+  AdvisorAccount,
+  'reviewLink' | 'trafficSources' | 'content' | 'orders' | 'support'
+>[] = [
   {
     id: 'adv-frazier',
     name: 'Renzo Frazier',
@@ -146,6 +191,57 @@ const seed: AdvisorAccount[] = [
   },
 ]
 
+function slugify(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+}
+
+const trafficSplit = (visitors: number) => [
+  { source: 'Organic Search', visitors: Math.round(visitors * 0.44) },
+  { source: 'Direct', visitors: Math.round(visitors * 0.22) },
+  { source: 'Social', visitors: Math.round(visitors * 0.17) },
+  { source: 'Referral', visitors: Math.round(visitors * 0.1) },
+  { source: 'Email', visitors: Math.round(visitors * 0.07) },
+]
+
+const sampleContent = (id: string): AdvisorContent[] =>
+  id === 'adv-frazier'
+    ? [
+        { id: 'ct-1', title: 'Mid-Year Market Check-In', channel: 'LinkedIn', scheduledFor: '2026-06-09', status: 'pending', body: 'Markets shifted fast in the first half of 2026 — three things to review before Q3.', uploadedOn: '2026-06-01' },
+        { id: 'ct-2', title: '5 Tax Moves Before Year-End', channel: 'Facebook', scheduledFor: '2026-06-11', status: 'approved', body: 'From Roth conversions to tax-loss harvesting — five moves to lower your 2026 bill.', uploadedOn: '2026-06-02' },
+      ]
+    : id === 'adv-cole'
+      ? [{ id: 'ct-3', title: 'Retirement Myths, Debunked', channel: 'Blog', scheduledFor: '2026-06-14', status: 'pending', body: 'Three retirement myths that could be costing you.', uploadedOn: '2026-06-05' }]
+      : []
+
+const sampleOrders = (id: string): AdvisorServiceOrder[] =>
+  id === 'adv-frazier'
+    ? [
+        { id: 'so-1', item: 'Premium Business Cards', category: 'Print', quantity: 500, status: 'in_production', submittedOn: '2026-05-28', cost: 96 },
+        { id: 'so-2', item: 'Seminar Postcards', category: 'Print', quantity: 1000, status: 'shipped', submittedOn: '2026-05-19', cost: 330 },
+      ]
+    : id === 'adv-cole'
+      ? [{ id: 'so-3', item: 'Landing page — July webinar', category: 'Website', status: 'submitted', submittedOn: '2026-06-03', cost: 450 }]
+      : []
+
+const sampleSupport = (id: string): AdvisorSupportReq[] =>
+  id === 'adv-frazier'
+    ? [
+        { id: 'sr-1', subject: 'Update homepage headshot', type: 'Website', priority: 'normal', status: 'in_progress', createdOn: '2026-06-02' },
+        { id: 'sr-2', subject: 'Landing page for July webinar', type: 'Digital', priority: 'high', status: 'open', createdOn: '2026-05-30' },
+      ]
+    : id === 'adv-cole'
+      ? [{ id: 'sr-3', subject: 'Add team bios to About page', type: 'Website', priority: 'low', status: 'open', createdOn: '2026-06-04' }]
+      : []
+
+const seed: AdvisorAccount[] = seedRaw.map((a) => ({
+  ...a,
+  reviewLink: `/r/${slugify(a.firm)}`,
+  trafficSources: trafficSplit(a.metrics.visitors),
+  content: sampleContent(a.id),
+  orders: sampleOrders(a.id),
+  support: sampleSupport(a.id),
+}))
+
 function load(): AdvisorAccount[] {
   try {
     const raw = localStorage.getItem(STORE_KEY)
@@ -181,9 +277,14 @@ export function AdvisorsProvider({ children }: { children: ReactNode }) {
       status: 'active',
       joinedDate: todayIso(),
       accountManager: input.accountManager || 'Unassigned',
+      reviewLink: `/r/${slugify(input.firm)}`,
       metrics: { visitors: 0, leads: 0, appointments: 0, reviews: 0, avgRating: 0, seoScore: 0 },
+      trafficSources: [],
       clients: [],
       reviews: [],
+      content: [],
+      orders: [],
+      support: [],
     }
     setAdvisors((prev) => [advisor, ...prev])
     return advisor
@@ -227,9 +328,33 @@ export function AdvisorsProvider({ children }: { children: ReactNode }) {
     )
   }, [])
 
+  const addContentTo: AdvisorsValue['addContentTo'] = useCallback((advisorId, content) => {
+    setAdvisors((prev) =>
+      prev.map((a) =>
+        a.id === advisorId
+          ? {
+              ...a,
+              content: [
+                { ...content, id: rid('ct-'), status: 'pending', uploadedOn: todayIso() },
+                ...a.content,
+              ],
+            }
+          : a,
+      ),
+    )
+  }, [])
+
+  const removeContentFrom = useCallback((advisorId: string, contentId: string) => {
+    setAdvisors((prev) =>
+      prev.map((a) =>
+        a.id === advisorId ? { ...a, content: a.content.filter((c) => c.id !== contentId) } : a,
+      ),
+    )
+  }, [])
+
   const value = useMemo<AdvisorsValue>(
-    () => ({ advisors, getAdvisor, addAdvisor, updateAdvisor, removeAdvisor, addClientTo, removeClientFrom }),
-    [advisors, getAdvisor, addAdvisor, updateAdvisor, removeAdvisor, addClientTo, removeClientFrom],
+    () => ({ advisors, getAdvisor, addAdvisor, updateAdvisor, removeAdvisor, addClientTo, removeClientFrom, addContentTo, removeContentFrom }),
+    [advisors, getAdvisor, addAdvisor, updateAdvisor, removeAdvisor, addClientTo, removeClientFrom, addContentTo, removeContentFrom],
   )
 
   return <AdvisorsContext.Provider value={value}>{children}</AdvisorsContext.Provider>

@@ -21,13 +21,12 @@ create policy "read own profile"
   on public.profiles for select
   using (auth.uid() = id);
 
-drop policy if exists "admins read all profiles" on public.profiles;
-create policy "admins read all profiles"
-  on public.profiles for select
-  using (exists (
-    select 1 from public.profiles p
-    where p.id = auth.uid() and p.role = 'admin'
-  ));
+-- NOTE: do NOT add an "admins read all profiles" policy that queries the
+-- profiles table itself — Postgres rejects it with "infinite recursion". The
+-- app only needs each user to read their own row (above); admins list all
+-- users through the serverless API using the service-role key, which bypasses
+-- RLS. If you ran an earlier version with that policy, drop it:
+--   drop policy if exists "admins read all profiles" on public.profiles;
 
 -- ---------------------------------------------------------------------------
 -- service_tasks: the admin Service Progress board.
