@@ -52,6 +52,38 @@ export async function requireAdmin(req: VercelRequest, svc: SupabaseClient) {
   return data.user
 }
 
+/** Verify the caller is signed in (any role); return the auth user. */
+export async function requireUser(req: VercelRequest, svc: SupabaseClient) {
+  const token = bearer(req)
+  if (!token) throw new HttpError(401, 'Missing authorization token.')
+  const { data, error } = await svc.auth.getUser(token)
+  if (error || !data.user) throw new HttpError(401, 'Invalid or expired session.')
+  return data.user
+}
+
+/**
+ * Send a message payload to the configured Zapier "Catch Hook" webhook, which
+ * the user wires to Gmail / an SMS app / etc. No-ops (never throws) when the
+ * webhook isn't configured, so the app degrades gracefully.
+ */
+export async function sendViaZapier(
+  payload: Record<string, unknown>,
+): Promise<{ sent: boolean; reason?: string }> {
+  const url = process.env.ZAPIER_WEBHOOK_URL
+  if (!url) return { sent: false, reason: 'No send channel configured (set ZAPIER_WEBHOOK_URL in Vercel).' }
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    if (!res.ok) return { sent: false, reason: `Webhook returned ${res.status}` }
+    return { sent: true }
+  } catch (e) {
+    return { sent: false, reason: e instanceof Error ? e.message : 'Webhook error' }
+  }
+}
+
 /**
  * Extract a readable message from anything thrown. Supabase/Postgrest errors
  * are plain objects (not Error instances), so we check for a `message` field

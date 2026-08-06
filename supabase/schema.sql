@@ -68,6 +68,24 @@ create table if not exists public.advisors_data (
 alter table public.advisors_data enable row level security;
 -- No public policies: all access goes through the service-role API.
 
+-- ---------------------------------------------------------------------------
+-- advisor_workspace: each signed-in user's own clients, reviews, and review
+-- settings, stored as one JSON row keyed by their auth user id.
+-- ---------------------------------------------------------------------------
+create table if not exists public.advisor_workspace (
+  user_id    uuid primary key references auth.users (id) on delete cascade,
+  data       jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
+alter table public.advisor_workspace enable row level security;
+
+drop policy if exists "manage own workspace" on public.advisor_workspace;
+create policy "manage own workspace"
+  on public.advisor_workspace for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
 -- Note: create/update/delete for users, tasks, and advisors go through the
 -- serverless functions in /api using the service-role key, which bypasses RLS.
 -- That's why only SELECT policies are needed on profiles / service_tasks.

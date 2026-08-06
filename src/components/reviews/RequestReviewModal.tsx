@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react'
-import { Copy, Link2, Mail, MessageSquare, Send } from 'lucide-react'
+import { Copy, Link2, Loader2, Mail, MessageSquare, Send, Zap } from 'lucide-react'
 import { Modal } from '../ui/Modal'
 import { Button } from '../ui/Button'
 import { useToast } from '../ui/Toast'
 import { useClients, type Client, type ReviewChannel } from '../../state/Clients'
+import { useAuth } from '../../state/Auth'
 import { buildMessage, mailtoHref, publicReviewUrl, smsHref } from '../../lib/reviewsUtil'
 import { cx } from '../../lib/format'
 
@@ -15,8 +16,10 @@ interface RequestReviewModalProps {
 
 export function RequestReviewModal({ open, onClose, client }: RequestReviewModalProps) {
   const { settings, markRequested } = useClients()
+  const { demoMode, getAccessToken } = useAuth()
   const notify = useToast()
   const [channel, setChannel] = useState<ReviewChannel>('sms')
+  const [sending, setSending] = useState(false)
 
   const link = publicReviewUrl(settings)
   const message = useMemo(
@@ -47,6 +50,38 @@ export function RequestReviewModal({ open, onClose, client }: RequestReviewModal
     onClose()
   }
 
+  // Server-side send via the configured Zapier webhook (no device needed).
+  const sendNow = async () => {
+    if (!client) return
+    const to = channel === 'sms' ? client.phone : client.email
+    if (!to) {
+      notify(`No ${channel === 'sms' ? 'phone' : 'email'} on file for ${client.name}.`)
+      return
+    }
+    setSending(true)
+    try {
+      const token = await getAccessToken()
+      const res = await fetch('/api/me/send', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ to, channel, subject, body: shownMessage, name: client.name, purpose: 'review_request' }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error ?? 'Send failed.')
+      if (data.sent) {
+        markRequested(client.id, channel)
+        notify(`Review request sent to ${client.name}.`)
+        onClose()
+      } else {
+        notify(data.reason ?? 'No send channel configured yet.')
+      }
+    } catch (e) {
+      notify(e instanceof Error ? e.message : 'Send failed.')
+    } finally {
+      setSending(false)
+    }
+  }
+
   const copy = async (value: string, label: string) => {
     try {
       await navigator.clipboard.writeText(value)
@@ -71,9 +106,14 @@ export function RequestReviewModal({ open, onClose, client }: RequestReviewModal
           <Button variant="secondary" onClick={onClose}>
             Close
           </Button>
-          <Button onClick={send} disabled={!client || (channel === 'sms' ? !canSms : !canEmail)}>
+          <Button variant="secondary" onClick={send} disabled={!client || (channel === 'sms' ? !canSms : !canEmail)}>
             <Send size={15} /> Open {channel === 'sms' ? 'Messages' : 'Email'}
           </Button>
+          {!demoMode && (
+            <Button onClick={sendNow} disabled={sending || !client || (channel === 'sms' ? !canSms : !canEmail)}>
+              {sending ? <Loader2 size={15} className="animate-spin" /> : <Zap size={15} />} Send now
+            </Button>
+          )}
         </>
       }
     >

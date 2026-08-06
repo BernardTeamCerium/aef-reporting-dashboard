@@ -8,6 +8,8 @@ import {
   useState,
   type ReactNode,
 } from 'react'
+import { isAuthEnabled } from '../lib/supabase'
+import { useAuth } from './Auth'
 
 // Shared store for customer profiles, collected reviews, and settings. Powers
 // both the Reviews hub and the Clients (customer profiles) page. Persists to
@@ -126,21 +128,81 @@ function load(): Persisted {
   return { clients: seedClients, reviews: seedReviews, settings: defaultSettings }
 }
 
+// Best-effort push of the workspace to Supabase. Never throws.
+async function putWorkspace(token: string | null, data: unknown) {
+  if (!token) return
+  try {
+    await fetch('/api/me/workspace', {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+      body: JSON.stringify({ data }),
+    })
+  } catch {
+    /* ignore — local remains the source of truth */
+  }
+}
+
 export function ClientsProvider({ children }: { children: ReactNode }) {
   const initial = useRef(load()).current
   const [clients, setClients] = useState<Client[]>(initial.clients)
   const [reviews, setReviews] = useState<CustomerReview[]>(initial.reviews)
   const [settings, setSettings] = useState<ReviewSettings>(initial.settings)
+  const { user, getAccessToken } = useAuth()
 
-  // Persist on change. Video object URLs won't survive a reload, which is fine
-  // for a demo; text reviews and profiles do.
+  const stateRef = useRef({ clients, reviews, settings })
+  stateRef.current = { clients, reviews, settings }
+  const hydratedRef = useRef(false)
+
+  // Local cache (also the demo-mode store). Always runs — local-first.
   useEffect(() => {
     try {
       localStorage.setItem(STORE_KEY, JSON.stringify({ clients, reviews, settings }))
     } catch {
-      /* quota — ignore in demo */
+      /* quota — ignore */
     }
   }, [clients, reviews, settings])
+
+  // Hydrate the signed-in user's workspace from Supabase (best effort).
+  useEffect(() => {
+    if (!isAuthEnabled || !user) return
+    let active = true
+    ;(async () => {
+      try {
+        const token = await getAccessToken()
+        if (!token) return
+        const res = await fetch('/api/me/workspace', { headers: { authorization: `Bearer ${token}` } })
+        if (!res.ok) return
+        const json = await res.json()
+        if (!active) return
+        const d = json.data as { clients?: Client[]; reviews?: CustomerReview[]; settings?: Partial<ReviewSettings> } | null
+        if (d && typeof d === 'object') {
+          if (Array.isArray(d.clients)) setClients(d.clients)
+          if (Array.isArray(d.reviews)) setReviews(d.reviews)
+          if (d.settings) setSettings((prev) => ({ ...prev, ...d.settings }))
+        } else {
+          // No workspace yet — seed it with the current local state.
+          await putWorkspace(token, stateRef.current)
+        }
+      } catch {
+        /* keep local */
+      } finally {
+        if (active) hydratedRef.current = true
+      }
+    })()
+    return () => {
+      active = false
+    }
+  }, [user?.id, getAccessToken])
+
+  // Best-effort persist on change (guarded so the seed can't overwrite real
+  // server data before hydration completes).
+  useEffect(() => {
+    if (!isAuthEnabled || !user || !hydratedRef.current) return
+    const t = setTimeout(() => {
+      void getAccessToken().then((token) => putWorkspace(token, { clients, reviews, settings }))
+    }, 800)
+    return () => clearTimeout(t)
+  }, [clients, reviews, settings, user?.id, getAccessToken])
 
   const addClient = useCallback((input: NewClientInput) => {
     const client: Client = {
