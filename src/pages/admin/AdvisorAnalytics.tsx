@@ -25,6 +25,7 @@ import {
   type AdvisorKeyword,
   type AnalyticsSource,
 } from '../../state/Advisors'
+import { useAuth } from '../../state/Auth'
 import { cx, formatDate } from '../../lib/format'
 
 const inputCls =
@@ -221,10 +222,12 @@ function KeywordEditor({ advisor }: { advisor: AdvisorAccount }) {
 // --- Integration ----------------------------------------------------------
 function IntegrationCard({ advisor }: { advisor: AdvisorAccount }) {
   const { updateAdvisor } = useAdvisors()
+  const { getAccessToken, demoMode } = useAuth()
   const notify = useToast()
   const [source, setSource] = useState<AnalyticsSource>(advisor.integration.source)
   const [gaPropertyId, setGaPropertyId] = useState(advisor.integration.gaPropertyId ?? '')
   const [searchConsoleUrl, setSearchConsoleUrl] = useState(advisor.integration.searchConsoleUrl ?? '')
+  const [syncing, setSyncing] = useState(false)
 
   useEffect(() => {
     setSource(advisor.integration.source)
@@ -239,17 +242,43 @@ function IntegrationCard({ advisor }: { advisor: AdvisorAccount }) {
     notify('Integration settings saved.')
   }
 
-  const sync = () => {
+  const sync = async () => {
+    if (demoMode) {
+      notify('Live sync needs the deployed backend (Supabase + Google). It works once connected.')
+      return
+    }
     if (source !== 'google_analytics') {
       notify('Switch the source to Google Analytics and save first.')
       return
     }
-    if (!gaPropertyId.trim()) {
-      notify('Add your GA4 Property ID first.')
+    if (!gaPropertyId.trim() && !searchConsoleUrl.trim()) {
+      notify('Add a GA4 Property ID or Search Console URL first.')
       return
     }
-    updateAdvisor(advisor.id, { integration: { ...advisor.integration, source, gaPropertyId, searchConsoleUrl, lastSyncedAt: new Date().toISOString().slice(0, 10) } })
-    notify('Sync requested. Connect the Google API (see docs) to pull live numbers; values stay manual until then.')
+    setSyncing(true)
+    try {
+      const token = await getAccessToken()
+      const res = await fetch('/api/admin/sync-analytics', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ gaPropertyId: gaPropertyId.trim(), searchConsoleUrl: searchConsoleUrl.trim() }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error ?? 'Sync failed.')
+
+      const patch: Partial<AdvisorAccount> = {
+        integration: { ...advisor.integration, source, gaPropertyId, searchConsoleUrl, lastSyncedAt: new Date().toISOString().slice(0, 10) },
+      }
+      if (typeof data.visitors === 'number') patch.metrics = { ...advisor.metrics, visitors: data.visitors }
+      if (Array.isArray(data.trafficSources) && data.trafficSources.length) patch.trafficSources = data.trafficSources
+      if (Array.isArray(data.keywords) && data.keywords.length) patch.keywords = data.keywords
+      updateAdvisor(advisor.id, patch)
+      notify('Synced from Google. You can still override any number manually.')
+    } catch (e) {
+      notify(e instanceof Error ? e.message : 'Sync failed.')
+    } finally {
+      setSyncing(false)
+    }
   }
 
   return (
@@ -285,7 +314,9 @@ function IntegrationCard({ advisor }: { advisor: AdvisorAccount }) {
         )}
         <div className="flex flex-wrap items-center gap-2">
           <Button onClick={save}>Save settings</Button>
-          <Button variant="secondary" onClick={sync}><RefreshCw size={15} /> Sync now</Button>
+          <Button variant="secondary" onClick={sync} disabled={syncing}>
+            <RefreshCw size={15} className={syncing ? 'animate-spin' : undefined} /> {syncing ? 'Syncing…' : 'Sync now'}
+          </Button>
         </div>
         <p className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">
           Recommended: <strong>Google Analytics 4</strong> for traffic and <strong>Google Search Console</strong> for

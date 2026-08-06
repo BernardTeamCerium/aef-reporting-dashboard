@@ -55,6 +55,19 @@ create policy "admins read tasks"
     where p.id = auth.uid() and p.role = 'admin'
   ));
 
--- Note: create/update/delete for users and tasks go through the serverless
--- functions in /api using the service-role key, which bypasses RLS. That's why
--- only SELECT policies are needed here.
+-- ---------------------------------------------------------------------------
+-- advisors_data: the advisors registry (each advisor stored as one JSON row).
+-- Read/written only by the admin serverless API using the service-role key.
+-- ---------------------------------------------------------------------------
+create table if not exists public.advisors_data (
+  id         text primary key,
+  data       jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
+alter table public.advisors_data enable row level security;
+-- No public policies: all access goes through the service-role API.
+
+-- Note: create/update/delete for users, tasks, and advisors go through the
+-- serverless functions in /api using the service-role key, which bypasses RLS.
+-- That's why only SELECT policies are needed on profiles / service_tasks.

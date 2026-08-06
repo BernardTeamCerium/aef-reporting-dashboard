@@ -9,6 +9,8 @@ import {
   type ReactNode,
 } from 'react'
 import type { Client, CustomerReview } from './Clients'
+import { isAuthEnabled } from '../lib/supabase'
+import { useAuth } from './Auth'
 
 // Registry of every advisor the OneStop team manages. Powers the admin
 // console: the roster, add-advisor, and the per-advisor drill-in (their
@@ -289,9 +291,30 @@ function load(): AdvisorAccount[] {
   return seed
 }
 
+// Best-effort push of the whole registry to Supabase. Never throws.
+async function putAdvisors(token: string | null, advisors: AdvisorAccount[]) {
+  if (!token) return
+  try {
+    await fetch('/api/admin/advisors-data', {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+      body: JSON.stringify({ advisors }),
+    })
+  } catch {
+    /* ignore — local state remains the source of truth */
+  }
+}
+
 export function AdvisorsProvider({ children }: { children: ReactNode }) {
   const [advisors, setAdvisors] = useState<AdvisorAccount[]>(useRef(load()).current)
+  const { isAdmin, getAccessToken } = useAuth()
 
+  // Keep a ref to the latest advisors for async closures.
+  const advisorsRef = useRef(advisors)
+  advisorsRef.current = advisors
+  const hydratedRef = useRef(false)
+
+  // Local cache (also the demo-mode store). Always runs — local-first.
   useEffect(() => {
     try {
       localStorage.setItem(STORE_KEY, JSON.stringify(advisors))
@@ -299,6 +322,47 @@ export function AdvisorsProvider({ children }: { children: ReactNode }) {
       /* ignore */
     }
   }, [advisors])
+
+  // When a real admin is signed in, hydrate from Supabase. Falls back to the
+  // local/seed data on any failure, so the console can never break.
+  useEffect(() => {
+    if (!isAuthEnabled || !isAdmin) return
+    let active = true
+    ;(async () => {
+      try {
+        const token = await getAccessToken()
+        if (!token) return
+        const res = await fetch('/api/admin/advisors-data', { headers: { authorization: `Bearer ${token}` } })
+        if (!res.ok) return
+        const json = await res.json()
+        if (!active) return
+        const list = json.advisors as AdvisorAccount[] | undefined
+        if (Array.isArray(list) && list.length) {
+          setAdvisors(list)
+        } else {
+          // Server is empty — seed it with the current advisors.
+          await putAdvisors(token, advisorsRef.current)
+        }
+      } catch {
+        /* keep local */
+      } finally {
+        if (active) hydratedRef.current = true
+      }
+    })()
+    return () => {
+      active = false
+    }
+  }, [isAdmin, getAccessToken])
+
+  // Best-effort persist on change (guarded so the initial seed can't overwrite
+  // real server data before hydration completes).
+  useEffect(() => {
+    if (!isAuthEnabled || !isAdmin || !hydratedRef.current) return
+    const t = setTimeout(() => {
+      void getAccessToken().then((token) => putAdvisors(token, advisors))
+    }, 800)
+    return () => clearTimeout(t)
+  }, [advisors, isAdmin, getAccessToken])
 
   const getAdvisor = useCallback((id: string) => advisors.find((a) => a.id === id), [advisors])
 
