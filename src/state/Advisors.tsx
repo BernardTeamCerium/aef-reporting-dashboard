@@ -58,6 +58,24 @@ export interface AdvisorSupportReq {
   createdOn: string
 }
 
+export interface AdvisorKeyword {
+  id: string
+  term: string
+  currentRank: number
+  previousRank: number
+  searchVolume: number
+}
+
+/** Where an advisor's analytics come from. */
+export type AnalyticsSource = 'manual' | 'google_analytics'
+
+export interface AdvisorIntegration {
+  source: AnalyticsSource
+  gaPropertyId?: string
+  searchConsoleUrl?: string
+  lastSyncedAt?: string
+}
+
 export interface AdvisorAccount {
   id: string
   name: string
@@ -72,6 +90,8 @@ export interface AdvisorAccount {
   reviewLink: string
   metrics: AdvisorMetrics
   trafficSources: { source: string; visitors: number }[]
+  keywords: AdvisorKeyword[]
+  integration: AdvisorIntegration
   clients: Client[]
   reviews: CustomerReview[]
   content: AdvisorContent[]
@@ -114,7 +134,7 @@ const g = (_birthday?: string): Client['greetings'] => ({ birthday: true, holida
 
 const seedRaw: Omit<
   AdvisorAccount,
-  'reviewLink' | 'trafficSources' | 'content' | 'orders' | 'support'
+  'reviewLink' | 'trafficSources' | 'keywords' | 'integration' | 'content' | 'orders' | 'support'
 >[] = [
   {
     id: 'adv-frazier',
@@ -233,10 +253,27 @@ const sampleSupport = (id: string): AdvisorSupportReq[] =>
       ? [{ id: 'sr-3', subject: 'Add team bios to About page', type: 'Website', priority: 'low', status: 'open', createdOn: '2026-06-04' }]
       : []
 
+const sampleKeywords = (id: string): AdvisorKeyword[] =>
+  id === 'adv-frazier'
+    ? [
+        { id: 'kw-1', term: 'financial advisor near me', currentRank: 4, previousRank: 9, searchVolume: 2400 },
+        { id: 'kw-2', term: 'retirement planning', currentRank: 2, previousRank: 5, searchVolume: 1300 },
+        { id: 'kw-3', term: 'fee-only financial planner', currentRank: 8, previousRank: 12, searchVolume: 880 },
+        { id: 'kw-4', term: '401k rollover advice', currentRank: 6, previousRank: 18, searchVolume: 1100 },
+      ]
+    : id === 'adv-cole'
+      ? [
+          { id: 'kw-5', term: 'retirement group', currentRank: 7, previousRank: 11, searchVolume: 720 },
+          { id: 'kw-6', term: 'roth conversion strategy', currentRank: 13, previousRank: 15, searchVolume: 640 },
+        ]
+      : []
+
 const seed: AdvisorAccount[] = seedRaw.map((a) => ({
   ...a,
   reviewLink: `/r/${slugify(a.firm)}`,
   trafficSources: trafficSplit(a.metrics.visitors),
+  keywords: sampleKeywords(a.id),
+  integration: { source: 'manual' as const },
   content: sampleContent(a.id),
   orders: sampleOrders(a.id),
   support: sampleSupport(a.id),
@@ -280,6 +317,8 @@ export function AdvisorsProvider({ children }: { children: ReactNode }) {
       reviewLink: `/r/${slugify(input.firm)}`,
       metrics: { visitors: 0, leads: 0, appointments: 0, reviews: 0, avgRating: 0, seoScore: 0 },
       trafficSources: [],
+      keywords: [],
+      integration: { source: 'manual' },
       clients: [],
       reviews: [],
       content: [],
