@@ -26,6 +26,7 @@ import { Button } from '../../components/ui/Button'
 import { Modal } from '../../components/ui/Modal'
 import { useToast } from '../../components/ui/Toast'
 import { useAdvisors, type AdvisorContent } from '../../state/Advisors'
+import { useNotify } from '../../state/Notifications'
 import { AdvisorAnalytics } from './AdvisorAnalytics'
 import { initialsOf } from '../../lib/reviewsUtil'
 import { formatCurrency, formatDate, cx } from '../../lib/format'
@@ -44,6 +45,7 @@ export function AdvisorDetail() {
   const { id = '' } = useParams()
   const { getAdvisor, addClientTo, removeClientFrom, addContentTo, removeContentFrom } = useAdvisors()
   const notify = useToast()
+  const pushNotify = useNotify()
   const advisor = getAdvisor(id)
   const [tab, setTab] = useState<Tab>('overview')
   const [addClientOpen, setAddClientOpen] = useState(false)
@@ -345,7 +347,18 @@ export function AdvisorDetail() {
       <UploadContentModal
         open={uploadOpen}
         onClose={() => setUploadOpen(false)}
-        onUpload={(input) => { addContentTo(advisor.id, input); notify(`"${input.title}" pushed to ${advisor.firm} for approval.`) }}
+        onUpload={(input) => {
+          addContentTo(advisor.id, input)
+          notify(`"${input.title}" pushed to ${advisor.firm} for approval.`)
+          pushNotify({
+            audience: 'advisor',
+            type: 'content_uploaded',
+            title: 'New content to review',
+            body: `"${input.title}" (${input.channel}) is ready for your approval.`,
+            link: '/content',
+            email: advisor.email,
+          })
+        }}
       />
     </div>
   )

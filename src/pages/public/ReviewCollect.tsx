@@ -4,12 +4,14 @@ import { OneStopMark } from '../../components/Logo'
 import { Button } from '../../components/ui/Button'
 import { VideoRecorder } from '../../components/reviews/VideoRecorder'
 import { useClients } from '../../state/Clients'
+import { useNotify } from '../../state/Notifications'
 import { cx } from '../../lib/format'
 
 type Mode = 'choose' | 'text' | 'video'
 
 export function ReviewCollect() {
   const { settings, addReview } = useClients()
+  const pushNotify = useNotify()
   const [mode, setMode] = useState<Mode>('choose')
   const [rating, setRating] = useState(0)
   const [hover, setHover] = useState(0)
@@ -20,24 +22,37 @@ export function ReviewCollect() {
 
   const happy = rating >= 4
 
+  const notifyReview = (who: string, kind: string) =>
+    pushNotify({
+      audience: 'advisor',
+      type: 'review_received',
+      title: 'New review received',
+      body: `${who} left a ${kind}.`,
+      link: '/reviews',
+    })
+
   const submitText = () => {
+    const who = name.trim() || 'A client'
     addReview({
       clientName: name.trim() || 'Anonymous',
       type: 'text',
       rating,
       text: text.trim(),
     })
+    notifyReview(who, `${rating}-star review`)
     setSubmitted({ happy, type: 'text' })
   }
 
   const submitVideo = () => {
     if (!video) return
+    const who = name.trim() || 'A client'
     addReview({
       clientName: name.trim() || 'Anonymous',
       type: 'video',
       rating: rating || undefined,
       videoUrl: video.url,
     })
+    notifyReview(who, 'video testimonial')
     setSubmitted({ happy: rating === 0 ? true : happy, type: 'video' })
   }
 

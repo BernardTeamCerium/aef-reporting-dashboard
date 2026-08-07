@@ -18,6 +18,8 @@ import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
 import { useAppState } from '../state/AppState'
 import { useToast } from '../components/ui/Toast'
+import { useNotify } from '../state/Notifications'
+import { useAuth } from '../state/Auth'
 import { postStatusMeta } from '../lib/status'
 import { formatDate, relativeDay } from '../lib/format'
 import type { PostChannel, SocialPost } from '../types'
@@ -43,6 +45,9 @@ type Filter = 'all' | 'pending' | 'approved' | 'changes_requested'
 export function ContentApprovals() {
   const { posts, setPostStatus } = useAppState()
   const notify = useToast()
+  const pushNotify = useNotify()
+  const { user } = useAuth()
+  const who = user?.fullName ?? 'An advisor'
   const [filter, setFilter] = useState<Filter>('all')
   const [feedbackFor, setFeedbackFor] = useState<SocialPost | null>(null)
   const [feedbackText, setFeedbackText] = useState('')
@@ -57,12 +62,28 @@ export function ContentApprovals() {
   const approve = (post: SocialPost) => {
     setPostStatus(post.id, 'approved')
     notify(`"${post.title}" approved — scheduled for ${formatDate(post.scheduledFor)}.`)
+    pushNotify({
+      audience: 'admin',
+      type: 'content_approved',
+      title: 'Post approved',
+      body: `${who} approved "${post.title}" (${post.channel}).`,
+      link: '/admin/advisors',
+      email: true,
+    })
   }
 
   const submitFeedback = () => {
     if (!feedbackFor) return
     setPostStatus(feedbackFor.id, 'changes_requested', feedbackText.trim() || undefined)
     notify(`Changes requested on "${feedbackFor.title}".`)
+    pushNotify({
+      audience: 'admin',
+      type: 'content_changes',
+      title: 'Changes requested',
+      body: `${who} requested changes on "${feedbackFor.title}".`,
+      link: '/admin/advisors',
+      email: true,
+    })
     setFeedbackFor(null)
     setFeedbackText('')
   }

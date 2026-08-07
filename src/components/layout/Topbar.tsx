@@ -3,6 +3,7 @@ import { ExternalLink, LifeBuoy, Menu } from 'lucide-react'
 import { navItems } from '../../nav'
 import { currentAdvisor } from '../../data/mockData'
 import { useSupportModal } from '../../state/SupportModal'
+import { NotificationBell } from './NotificationBell'
 import { Button } from '../ui/Button'
 
 interface TopbarProps {
@@ -56,6 +57,7 @@ export function Topbar({ onOpenMenu }: TopbarProps) {
           {currentAdvisor.website}
           <ExternalLink size={14} />
         </a>
+        <NotificationBell />
         <Button variant="primary" size="sm" onClick={() => openSupport()}>
           <LifeBuoy size={15} />
           <span className="hidden sm:inline">Get Support</span>
