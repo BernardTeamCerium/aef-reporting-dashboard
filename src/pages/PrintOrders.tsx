@@ -15,6 +15,8 @@ import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
 import { useAppState } from '../state/AppState'
 import { useToast } from '../components/ui/Toast'
+import { useNotify } from '../state/Notifications'
+import { useAuth } from '../state/Auth'
 import { currentAdvisor, printCatalog } from '../data/mockData'
 import { orderStatusMeta } from '../lib/status'
 import { formatCurrency, formatDate } from '../lib/format'
@@ -34,6 +36,8 @@ const orderSteps = ['submitted', 'in_review', 'in_production', 'shipped', 'deliv
 export function PrintOrders() {
   const { orders, addOrder } = useAppState()
   const notify = useToast()
+  const pushNotify = useNotify()
+  const { user } = useAuth()
   const [selected, setSelected] = useState<PrintProduct | null>(null)
   const [quantity, setQuantity] = useState(250)
   const [shipTo, setShipTo] = useState(
@@ -63,6 +67,14 @@ export function PrintOrders() {
       notes: notes.trim() || undefined,
     })
     notify(`Order ${order.id} submitted for ${quantity.toLocaleString()} × ${selected.name}.`)
+    pushNotify({
+      audience: 'admin',
+      type: 'new_order',
+      title: 'New print order',
+      body: `${user?.fullName ?? 'An advisor'} ordered ${quantity.toLocaleString()} × ${selected.name}.`,
+      link: '/admin',
+      email: true,
+    })
     setSelected(null)
   }
 

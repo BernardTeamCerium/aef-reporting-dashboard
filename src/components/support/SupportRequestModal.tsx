@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { useAppState } from '../../state/AppState'
+import { useNotify } from '../../state/Notifications'
+import { useAuth } from '../../state/Auth'
 import { useToast } from '../ui/Toast'
 import { Modal } from '../ui/Modal'
 import { Button } from '../ui/Button'
@@ -22,6 +24,8 @@ export function SupportRequestModal({
 }: SupportRequestModalProps) {
   const { addTicket } = useAppState()
   const notify = useToast()
+  const pushNotify = useNotify()
+  const { user } = useAuth()
 
   const [subject, setSubject] = useState('')
   const [type, setType] = useState<SupportType>(defaultType)
@@ -41,6 +45,14 @@ export function SupportRequestModal({
     if (!canSubmit) return
     const ticket = addTicket({ subject: subject.trim(), type, priority, description: description.trim() })
     notify(`Support request ${ticket.id} submitted — your team will reach out shortly.`)
+    pushNotify({
+      audience: 'admin',
+      type: 'support_request',
+      title: `New support request (${priority})`,
+      body: `${user?.fullName ?? 'An advisor'}: ${subject.trim()}`,
+      link: '/admin',
+      email: true,
+    })
     reset()
     onClose()
   }
