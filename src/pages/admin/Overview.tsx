@@ -5,6 +5,7 @@ import {
   CalendarCheck,
   LifeBuoy,
   Package,
+  Sparkles,
   Star,
   TrendingUp,
   Users,
@@ -38,6 +39,9 @@ export function AdminOverview() {
   const openSupport = advisors
     .flatMap((a) => a.support.filter((s) => s.status !== 'resolved').map((s) => ({ a, s })))
     .sort((x, y) => y.s.createdOn.localeCompare(x.s.createdOn))
+  const addonRequests = advisors
+    .flatMap((a) => a.addons.filter((r) => r.status === 'requested').map((r) => ({ a, r })))
+    .sort((x, y) => y.r.requestedOn.localeCompare(x.r.requestedOn))
 
   return (
     <div className="space-y-6">
@@ -141,6 +145,34 @@ export function AdminOverview() {
               </button>
             ))}
             {openSupport.length === 0 && (
+              <p className="px-5 py-6 text-center text-sm text-slate-400">No open requests.</p>
+            )}
+          </div>
+        </Card>
+
+        {/* Add-on requests */}
+        <Card className="flex flex-col">
+          <CardHeader
+            title="Add-on service requests"
+            subtitle="Advisors requesting extra services — invoice or cover"
+            icon={<Sparkles size={18} />}
+            action={addonRequests.length ? <Badge tone="amber">{addonRequests.length}</Badge> : <Badge tone="green">Clear</Badge>}
+          />
+          <div className="flex-1 divide-y divide-slate-100">
+            {addonRequests.slice(0, 5).map(({ a, r }) => (
+              <button
+                key={r.id}
+                onClick={() => navigate(`/admin/advisors/${a.id}`)}
+                className="flex w-full items-center justify-between gap-3 px-5 py-3 text-left hover:bg-slate-50"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-slate-800">{r.serviceName}</p>
+                  <p className="text-xs text-slate-500">{a.firm}</p>
+                </div>
+                <Badge tone="amber">Requested</Badge>
+              </button>
+            ))}
+            {addonRequests.length === 0 && (
               <p className="px-5 py-6 text-center text-sm text-slate-400">No open requests.</p>
             )}
           </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -26,14 +26,21 @@ import type { BadgeTone } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Modal } from '../../components/ui/Modal'
 import { useToast } from '../../components/ui/Toast'
-import { useAdvisors, type AdvisorContent, type ActivityCategory } from '../../state/Advisors'
+import {
+  useAdvisors,
+  type AdvisorContent,
+  type ActivityCategory,
+  type AddonRequest,
+  type AddonStatus,
+} from '../../state/Advisors'
 import { useNotify } from '../../state/Notifications'
 import { AdvisorAnalytics } from './AdvisorAnalytics'
 import { ActivityTimeline } from '../../components/advisor/ActivityTimeline'
+import { addonStatusMeta } from '../../lib/status'
 import { initialsOf } from '../../lib/reviewsUtil'
 import { formatCurrency, formatDate, cx } from '../../lib/format'
 
-type Tab = 'overview' | 'activity' | 'analytics' | 'content' | 'orders' | 'support' | 'clients' | 'reviews'
+type Tab = 'overview' | 'activity' | 'analytics' | 'content' | 'orders' | 'support' | 'addons' | 'clients' | 'reviews'
 
 const contentStatusMeta: Record<AdvisorContent['status'], { label: string; tone: BadgeTone }> = {
   pending: { label: 'Awaiting approval', tone: 'amber' },
@@ -45,7 +52,7 @@ const origin = typeof window !== 'undefined' ? window.location.origin : ''
 
 export function AdvisorDetail() {
   const { id = '' } = useParams()
-  const { getAdvisor, addClientTo, removeClientFrom, addContentTo, removeContentFrom, addActivityTo, removeActivityFrom } = useAdvisors()
+  const { getAdvisor, addClientTo, removeClientFrom, addContentTo, removeContentFrom, addActivityTo, removeActivityFrom, setAddonStatus } = useAdvisors()
   const notify = useToast()
   const pushNotify = useNotify()
   const advisor = getAdvisor(id)
@@ -53,6 +60,7 @@ export function AdvisorDetail() {
   const [addClientOpen, setAddClientOpen] = useState(false)
   const [uploadOpen, setUploadOpen] = useState(false)
   const [logOpen, setLogOpen] = useState(false)
+  const [respondReq, setRespondReq] = useState<AddonRequest | null>(null)
 
   if (!advisor) {
     return (
@@ -66,6 +74,7 @@ export function AdvisorDetail() {
   const reviewUrl = origin + advisor.reviewLink
   const pendingContent = advisor.content.filter((c) => c.status === 'pending').length
   const openSupport = advisor.support.filter((s) => s.status !== 'resolved').length
+  const pendingAddons = advisor.addons.filter((r) => r.status === 'requested').length
 
   const tabs: { key: Tab; label: string }[] = [
     { key: 'overview', label: 'Overview' },
@@ -74,6 +83,7 @@ export function AdvisorDetail() {
     { key: 'content', label: `Content${pendingContent ? ` (${pendingContent})` : ''}` },
     { key: 'orders', label: `Orders (${advisor.orders.length})` },
     { key: 'support', label: `Support${openSupport ? ` (${openSupport})` : ''}` },
+    { key: 'addons', label: `Add-ons${pendingAddons ? ` (${pendingAddons})` : ''}` },
     { key: 'clients', label: `Clients (${advisor.clients.length})` },
     { key: 'reviews', label: `Reviews (${advisor.reviews.length})` },
   ]
@@ -301,6 +311,41 @@ export function AdvisorDetail() {
         </Card>
       )}
 
+      {tab === 'addons' && (
+        <Card>
+          <CardHeader
+            title="Add-on service requests"
+            subtitle="Respond with an invoice or confirm company coverage"
+            icon={<Sparkles size={18} />}
+          />
+          <div className="divide-y divide-slate-100">
+            {advisor.addons.map((r) => {
+              const meta = addonStatusMeta[r.status]
+              return (
+                <div key={r.id} className="flex flex-col gap-2 px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-slate-800">{r.serviceName}</p>
+                    <p className="text-xs text-slate-500">
+                      Requested {formatDate(r.requestedOn)}
+                      {r.decisionNote ? ` · ${r.decisionNote}` : ''}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge tone={meta.tone}>{meta.label}</Badge>
+                    <Button size="sm" variant="secondary" onClick={() => setRespondReq(r)}>
+                      Respond
+                    </Button>
+                  </div>
+                </div>
+              )
+            })}
+            {advisor.addons.length === 0 && (
+              <p className="px-5 py-10 text-center text-sm text-slate-400">No add-on requests yet.</p>
+            )}
+          </div>
+        </Card>
+      )}
+
       {tab === 'clients' && (
         <Card>
           <CardHeader
@@ -385,6 +430,28 @@ export function AdvisorDetail() {
         onAdd={(input) => { addActivityTo(advisor.id, input); notify('Activity logged.') }}
       />
 
+      <RespondAddonModal
+        request={respondReq}
+        onClose={() => setRespondReq(null)}
+        onSave={(status, note) => {
+          if (!respondReq) return
+          setAddonStatus(advisor.id, respondReq.id, status, note)
+          notify('Response sent to the advisor.')
+          pushNotify({
+            audience: 'advisor',
+            type: 'addon_response',
+            title: `Update on ${respondReq.serviceName}`,
+            body:
+              status === 'invoiced' ? `An invoice has been sent for ${respondReq.serviceName}.`
+              : status === 'covered' ? `${respondReq.serviceName} is covered by your plan.`
+              : status === 'active' ? `${respondReq.serviceName} is now active.`
+              : `Your request for ${respondReq.serviceName} was declined.`,
+            link: '/services',
+            email: advisor.email,
+          })
+        }}
+      />
+
       <UploadContentModal
         open={uploadOpen}
         onClose={() => setUploadOpen(false)}
@@ -418,6 +485,77 @@ function Metric({ icon, value, label }: { icon: React.ReactNode; value: number |
       <p className="mt-2.5 text-2xl font-bold tracking-tight text-slate-900">{value}</p>
       <p className="text-xs text-slate-500">{label}</p>
     </Card>
+  )
+}
+
+function RespondAddonModal({
+  request,
+  onClose,
+  onSave,
+}: {
+  request: AddonRequest | null
+  onClose: () => void
+  onSave: (status: AddonStatus, note?: string) => void
+}) {
+  const [status, setStatus] = useState<AddonStatus>('invoiced')
+  const [note, setNote] = useState('')
+
+  useEffect(() => {
+    if (request) {
+      setStatus(request.status === 'requested' ? 'invoiced' : request.status)
+      setNote(request.decisionNote ?? '')
+    }
+  }, [request])
+
+  const options: { value: AddonStatus; label: string; hint: string }[] = [
+    { value: 'invoiced', label: 'Send invoice', hint: 'Add the invoice number or link below.' },
+    { value: 'covered', label: 'Company covers', hint: 'Note why / which plan covers it.' },
+    { value: 'active', label: 'Mark active', hint: 'Service is live for the advisor.' },
+    { value: 'declined', label: 'Decline', hint: 'Optionally explain why.' },
+  ]
+  const current = options.find((o) => o.value === status)
+
+  return (
+    <Modal
+      open={request !== null}
+      onClose={onClose}
+      title="Respond to request"
+      subtitle={request?.serviceName}
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button onClick={() => { onSave(status, note.trim() || undefined); onClose() }}>Send response</Button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-2">
+          {options.map((o) => (
+            <button
+              key={o.value}
+              type="button"
+              onClick={() => setStatus(o.value)}
+              className={cx(
+                'rounded-lg px-3 py-2 text-sm font-medium ring-1 ring-inset transition-colors',
+                status === o.value ? 'bg-brand-600 text-white ring-brand-600' : 'bg-white text-slate-600 ring-slate-300 hover:bg-slate-50',
+              )}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+        <label className="block">
+          <span className="mb-1 block text-sm font-medium text-slate-700">Note to advisor</span>
+          <textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            rows={3}
+            placeholder={current?.hint}
+            className={cx(inputCls, 'resize-none')}
+          />
+        </label>
+      </div>
+    </Modal>
   )
 }
 
