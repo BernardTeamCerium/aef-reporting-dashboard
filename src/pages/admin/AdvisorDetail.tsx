@@ -365,7 +365,20 @@ export function AdvisorDetail() {
         </div>
       )}
 
-      <AddClientModal open={addClientOpen} onClose={() => setAddClientOpen(false)} onAdd={(input) => { addClientTo(advisor.id, input); notify(`${input.name} added.`) }} />
+      <AddClientModal
+        open={addClientOpen}
+        onClose={() => setAddClientOpen(false)}
+        onAdd={(input) => {
+          addClientTo(advisor.id, input)
+          notify(`${input.name} added.`)
+          // Auto-log: onboarding a client is delivered work.
+          addActivityTo(advisor.id, {
+            date: new Date().toISOString().slice(0, 10),
+            category: 'Other',
+            title: `Onboarded new client: ${input.name}`,
+          })
+        }}
+      />
       <LogActivityModal
         open={logOpen}
         onClose={() => setLogOpen(false)}
@@ -385,6 +398,12 @@ export function AdvisorDetail() {
             body: `"${input.title}" (${input.channel}) is ready for your approval.`,
             link: '/content',
             email: advisor.email,
+          })
+          // Auto-log: creating content is delivered work.
+          addActivityTo(advisor.id, {
+            date: new Date().toISOString().slice(0, 10),
+            category: 'Content',
+            title: `Created "${input.title}" for ${input.channel}`,
           })
         }}
       />
