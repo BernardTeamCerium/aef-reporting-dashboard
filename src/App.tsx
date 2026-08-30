@@ -9,6 +9,7 @@ import { Support } from './pages/Support'
 import { Login } from './pages/Login'
 import { Reviews } from './pages/Reviews'
 import { Clients } from './pages/Clients'
+import { Services } from './pages/Services'
 import { ReviewCollect } from './pages/public/ReviewCollect'
 import { AdminUsers } from './pages/admin/Users'
 import { AdminProgress } from './pages/admin/Progress'
@@ -36,6 +37,7 @@ export default function App() {
           <Route path="/print" element={<PrintOrders />} />
           <Route path="/reviews" element={<Reviews />} />
           <Route path="/clients" element={<Clients />} />
+          <Route path="/services" element={<Services />} />
           <Route path="/seo" element={<Seo />} />
           <Route path="/support" element={<Support />} />
           <Route element={<RequireAdmin />}>

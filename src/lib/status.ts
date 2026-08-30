@@ -6,6 +6,17 @@ import type {
   TicketStatus,
 } from '../types'
 
+export const addonStatusMeta: Record<
+  'requested' | 'invoiced' | 'covered' | 'active' | 'declined',
+  { label: string; tone: BadgeTone }
+> = {
+  requested: { label: 'Requested', tone: 'amber' },
+  invoiced: { label: 'Invoice sent', tone: 'blue' },
+  covered: { label: 'Company covers', tone: 'green' },
+  active: { label: 'Active', tone: 'green' },
+  declined: { label: 'Declined', tone: 'gray' },
+}
+
 interface StatusMeta {
   label: string
   tone: BadgeTone

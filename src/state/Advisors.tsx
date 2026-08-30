@@ -90,6 +90,20 @@ export interface AdvisorActivity {
   impact?: string
 }
 
+export type AddonStatus = 'requested' | 'invoiced' | 'covered' | 'active' | 'declined'
+
+/** An advisor's request to purchase / add an additional service. */
+export interface AddonRequest {
+  id: string
+  serviceId: string
+  serviceName: string
+  requestedOn: string
+  status: AddonStatus
+  note?: string
+  /** The team's response (invoice number/link, coverage reason, etc.). */
+  decisionNote?: string
+}
+
 /** Where an advisor's analytics come from. */
 export type AnalyticsSource = 'manual' | 'google_analytics'
 
@@ -122,6 +136,7 @@ export interface AdvisorAccount {
   orders: AdvisorServiceOrder[]
   support: AdvisorSupportReq[]
   activity: AdvisorActivity[]
+  addons: AddonRequest[]
 }
 
 export interface NewAdvisorInput {
@@ -152,6 +167,8 @@ interface AdvisorsValue {
     activity: { date: string; category: ActivityCategory; title: string; description?: string; impact?: string },
   ) => void
   removeActivityFrom: (advisorId: string, activityId: string) => void
+  addAddonRequestTo: (advisorId: string, request: { serviceId: string; serviceName: string; note?: string }) => void
+  setAddonStatus: (advisorId: string, requestId: string, status: AddonStatus, decisionNote?: string) => void
 }
 
 const AdvisorsContext = createContext<AdvisorsValue | null>(null)
@@ -164,7 +181,7 @@ const g = (_birthday?: string): Client['greetings'] => ({ birthday: true, holida
 
 const seedRaw: Omit<
   AdvisorAccount,
-  'reviewLink' | 'trafficSources' | 'keywords' | 'integration' | 'content' | 'orders' | 'support' | 'activity'
+  'reviewLink' | 'trafficSources' | 'keywords' | 'integration' | 'content' | 'orders' | 'support' | 'activity' | 'addons'
 >[] = [
   {
     id: 'adv-frazier',
@@ -315,6 +332,16 @@ const sampleActivity = (id: string): AdvisorActivity[] =>
         ]
       : []
 
+const sampleAddons = (id: string): AddonRequest[] =>
+  id === 'adv-frazier'
+    ? [
+        { id: 'ad-1', serviceId: 'podcast', serviceName: 'Podcast Recording', requestedOn: '2026-06-05', status: 'invoiced', decisionNote: 'Invoice #INV-2043 sent — $750/mo.' },
+        { id: 'ad-2', serviceId: 'gbp', serviceName: 'Google Business Profile & Optimization', requestedOn: '2026-05-31', status: 'covered', decisionNote: 'Included in your Premium plan.' },
+      ]
+    : id === 'adv-cole'
+      ? [{ id: 'ad-3', serviceId: 'ads', serviceName: 'Search & Service Ads (Google Ads)', requestedOn: '2026-06-06', status: 'requested' }]
+      : []
+
 const seed: AdvisorAccount[] = seedRaw.map((a) => ({
   ...a,
   reviewLink: `/r/${slugify(a.firm)}`,
@@ -325,6 +352,7 @@ const seed: AdvisorAccount[] = seedRaw.map((a) => ({
   orders: sampleOrders(a.id),
   support: sampleSupport(a.id),
   activity: sampleActivity(a.id),
+  addons: sampleAddons(a.id),
 }))
 
 function load(): AdvisorAccount[] {
@@ -435,6 +463,7 @@ export function AdvisorsProvider({ children }: { children: ReactNode }) {
       orders: [],
       support: [],
       activity: [],
+      addons: [],
     }
     setAdvisors((prev) => [advisor, ...prev])
     return advisor
@@ -520,9 +549,40 @@ export function AdvisorsProvider({ children }: { children: ReactNode }) {
     )
   }, [])
 
+  const addAddonRequestTo: AdvisorsValue['addAddonRequestTo'] = useCallback((advisorId, request) => {
+    setAdvisors((prev) =>
+      prev.map((a) =>
+        a.id === advisorId
+          ? {
+              ...a,
+              addons: [
+                { ...request, id: rid('ad-'), requestedOn: todayIso(), status: 'requested' as const },
+                ...a.addons,
+              ],
+            }
+          : a,
+      ),
+    )
+  }, [])
+
+  const setAddonStatus: AdvisorsValue['setAddonStatus'] = useCallback((advisorId, requestId, status, decisionNote) => {
+    setAdvisors((prev) =>
+      prev.map((a) =>
+        a.id === advisorId
+          ? {
+              ...a,
+              addons: a.addons.map((r) =>
+                r.id === requestId ? { ...r, status, decisionNote: decisionNote ?? r.decisionNote } : r,
+              ),
+            }
+          : a,
+      ),
+    )
+  }, [])
+
   const value = useMemo<AdvisorsValue>(
-    () => ({ advisors, getAdvisor, addAdvisor, updateAdvisor, removeAdvisor, addClientTo, removeClientFrom, addContentTo, removeContentFrom, addActivityTo, removeActivityFrom }),
-    [advisors, getAdvisor, addAdvisor, updateAdvisor, removeAdvisor, addClientTo, removeClientFrom, addContentTo, removeContentFrom, addActivityTo, removeActivityFrom],
+    () => ({ advisors, getAdvisor, addAdvisor, updateAdvisor, removeAdvisor, addClientTo, removeClientFrom, addContentTo, removeContentFrom, addActivityTo, removeActivityFrom, addAddonRequestTo, setAddonStatus }),
+    [advisors, getAdvisor, addAdvisor, updateAdvisor, removeAdvisor, addClientTo, removeClientFrom, addContentTo, removeContentFrom, addActivityTo, removeActivityFrom, addAddonRequestTo, setAddonStatus],
   )
 
   return <AdvisorsContext.Provider value={value}>{children}</AdvisorsContext.Provider>

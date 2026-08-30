@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   LifeBuoy,
   Printer,
+  Sparkles,
   Star,
   TrendingUp,
   Users,
@@ -46,6 +47,12 @@ export const navItems: NavItem[] = [
     label: 'Clients',
     icon: Users,
     description: 'Profiles, birthdays & greetings',
+  },
+  {
+    to: '/services',
+    label: 'Add-on Services',
+    icon: Sparkles,
+    description: 'Request additional services',
   },
   {
     to: '/seo',
