@@ -12,6 +12,7 @@ import {
   Package,
   Phone,
   Plus,
+  Sparkles,
   Star,
   Trash2,
   TrendingUp,
@@ -25,13 +26,14 @@ import type { BadgeTone } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Modal } from '../../components/ui/Modal'
 import { useToast } from '../../components/ui/Toast'
-import { useAdvisors, type AdvisorContent } from '../../state/Advisors'
+import { useAdvisors, type AdvisorContent, type ActivityCategory } from '../../state/Advisors'
 import { useNotify } from '../../state/Notifications'
 import { AdvisorAnalytics } from './AdvisorAnalytics'
+import { ActivityTimeline } from '../../components/advisor/ActivityTimeline'
 import { initialsOf } from '../../lib/reviewsUtil'
 import { formatCurrency, formatDate, cx } from '../../lib/format'
 
-type Tab = 'overview' | 'analytics' | 'content' | 'orders' | 'support' | 'clients' | 'reviews'
+type Tab = 'overview' | 'activity' | 'analytics' | 'content' | 'orders' | 'support' | 'clients' | 'reviews'
 
 const contentStatusMeta: Record<AdvisorContent['status'], { label: string; tone: BadgeTone }> = {
   pending: { label: 'Awaiting approval', tone: 'amber' },
@@ -43,13 +45,14 @@ const origin = typeof window !== 'undefined' ? window.location.origin : ''
 
 export function AdvisorDetail() {
   const { id = '' } = useParams()
-  const { getAdvisor, addClientTo, removeClientFrom, addContentTo, removeContentFrom } = useAdvisors()
+  const { getAdvisor, addClientTo, removeClientFrom, addContentTo, removeContentFrom, addActivityTo, removeActivityFrom } = useAdvisors()
   const notify = useToast()
   const pushNotify = useNotify()
   const advisor = getAdvisor(id)
   const [tab, setTab] = useState<Tab>('overview')
   const [addClientOpen, setAddClientOpen] = useState(false)
   const [uploadOpen, setUploadOpen] = useState(false)
+  const [logOpen, setLogOpen] = useState(false)
 
   if (!advisor) {
     return (
@@ -66,6 +69,7 @@ export function AdvisorDetail() {
 
   const tabs: { key: Tab; label: string }[] = [
     { key: 'overview', label: 'Overview' },
+    { key: 'activity', label: `Activity Log (${advisor.activity.length})` },
     { key: 'analytics', label: 'Analytics' },
     { key: 'content', label: `Content${pendingContent ? ` (${pendingContent})` : ''}` },
     { key: 'orders', label: `Orders (${advisor.orders.length})` },
@@ -191,6 +195,24 @@ export function AdvisorDetail() {
             </Card>
           </div>
         </div>
+      )}
+
+      {tab === 'activity' && (
+        <Card>
+          <CardHeader
+            title="Activity log"
+            subtitle="Everything your team has delivered — visible to the advisor as proof of value"
+            icon={<Sparkles size={18} />}
+            action={<Button size="sm" onClick={() => setLogOpen(true)}><Plus size={14} /> Log activity</Button>}
+          />
+          <div className="p-5">
+            <ActivityTimeline
+              items={advisor.activity}
+              onRemove={(aid) => { removeActivityFrom(advisor.id, aid); notify('Entry removed.') }}
+              emptyText="No activity logged yet — add what your team has delivered."
+            />
+          </div>
+        </Card>
       )}
 
       {tab === 'analytics' && <AdvisorAnalytics advisor={advisor} />}
@@ -344,6 +366,12 @@ export function AdvisorDetail() {
       )}
 
       <AddClientModal open={addClientOpen} onClose={() => setAddClientOpen(false)} onAdd={(input) => { addClientTo(advisor.id, input); notify(`${input.name} added.`) }} />
+      <LogActivityModal
+        open={logOpen}
+        onClose={() => setLogOpen(false)}
+        onAdd={(input) => { addActivityTo(advisor.id, input); notify('Activity logged.') }}
+      />
+
       <UploadContentModal
         open={uploadOpen}
         onClose={() => setUploadOpen(false)}
@@ -371,6 +399,74 @@ function Metric({ icon, value, label }: { icon: React.ReactNode; value: number |
       <p className="mt-2.5 text-2xl font-bold tracking-tight text-slate-900">{value}</p>
       <p className="text-xs text-slate-500">{label}</p>
     </Card>
+  )
+}
+
+const ACTIVITY_CATEGORIES: ActivityCategory[] = [
+  'Content', 'Print', 'Website', 'SEO', 'Ads', 'Design', 'Email', 'Strategy', 'Other',
+]
+
+function LogActivityModal({
+  open,
+  onClose,
+  onAdd,
+}: {
+  open: boolean
+  onClose: () => void
+  onAdd: (input: { date: string; category: ActivityCategory; title: string; description?: string; impact?: string }) => void
+}) {
+  const today = new Date().toISOString().slice(0, 10)
+  const [date, setDate] = useState(today)
+  const [category, setCategory] = useState<ActivityCategory>('Content')
+  const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
+  const [impact, setImpact] = useState('')
+  const [err, setErr] = useState<string | null>(null)
+
+  const submit = () => {
+    if (!title.trim()) { setErr('Describe what was done.'); return }
+    onAdd({ date: date || today, category, title: title.trim(), description: description.trim() || undefined, impact: impact.trim() || undefined })
+    setDate(today); setCategory('Content'); setTitle(''); setDescription(''); setImpact(''); setErr(null)
+    onClose()
+  }
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Log activity"
+      subtitle="Record something your team delivered — the advisor will see it as proof of value."
+      size="lg"
+      footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button onClick={submit}><Plus size={16} /> Add to log</Button></>}
+    >
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <label className="block">
+            <span className="mb-1 block text-sm font-medium text-slate-700">Date</span>
+            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputCls} />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-sm font-medium text-slate-700">Category</span>
+            <select value={category} onChange={(e) => setCategory(e.target.value as ActivityCategory)} className={inputCls}>
+              {ACTIVITY_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </label>
+        </div>
+        <label className="block">
+          <span className="mb-1 block text-sm font-medium text-slate-700">What was done</span>
+          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder='e.g. Launched refreshed homepage with a booking CTA' className={inputCls} />
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-sm font-medium text-slate-700">Details (optional)</span>
+          <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className={cx(inputCls, 'resize-none')} />
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-sm font-medium text-slate-700">Impact / result (optional)</span>
+          <input value={impact} onChange={(e) => setImpact(e.target.value)} placeholder="e.g. Appointments up 18%" className={inputCls} />
+        </label>
+        {err && <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700">{err}</p>}
+      </div>
+    </Modal>
   )
 }
 

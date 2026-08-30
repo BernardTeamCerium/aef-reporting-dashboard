@@ -18,6 +18,7 @@ import {
   Gauge,
   LifeBuoy,
   Printer,
+  Sparkles,
   TrendingUp,
   UserPlus,
   Users,
@@ -33,6 +34,9 @@ import {
   trafficSources,
 } from '../data/mockData'
 import { useAppState } from '../state/AppState'
+import { useAdvisors } from '../state/Advisors'
+import { useAuth } from '../state/Auth'
+import { ActivityTimeline } from '../components/advisor/ActivityTimeline'
 import { formatDate, relativeDay } from '../lib/format'
 import { orderStatusMeta, postStatusMeta } from '../lib/status'
 
@@ -47,6 +51,12 @@ const sourceColors = ['#c23e0c', '#ea520c', '#f96d16', '#fb8a3c', '#fdb074']
 
 export function Dashboard() {
   const { posts, orders, tickets } = useAppState()
+  const { advisors } = useAdvisors()
+  const { user } = useAuth()
+  // The logged-in advisor's own record (matched by email), for their value log.
+  const myRecord =
+    advisors.find((a) => user?.email && a.email.toLowerCase() === user.email.toLowerCase()) ??
+    advisors.find((a) => a.id === 'adv-frazier')
 
   const pendingPosts = posts.filter((p) => p.status === 'pending')
   const openTickets = tickets.filter((t) => t.status !== 'resolved')
@@ -177,6 +187,20 @@ export function Dashboard() {
           </div>
         </Card>
       </div>
+
+      {/* Value log — what the OneStop team has delivered */}
+      {myRecord && myRecord.activity.length > 0 && (
+        <Card>
+          <CardHeader
+            title="What your OneStop team has delivered"
+            subtitle="Recent work and results for your firm"
+            icon={<Sparkles size={18} />}
+          />
+          <div className="p-5">
+            <ActivityTimeline items={myRecord.activity.slice(0, 6)} />
+          </div>
+        </Card>
+      )}
 
       {/* At-a-glance widgets linking to other features */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
