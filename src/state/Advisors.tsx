@@ -68,6 +68,28 @@ export interface AdvisorKeyword {
   searchVolume: number
 }
 
+export type ActivityCategory =
+  | 'Content'
+  | 'Print'
+  | 'Website'
+  | 'SEO'
+  | 'Ads'
+  | 'Design'
+  | 'Email'
+  | 'Strategy'
+  | 'Other'
+
+/** A logged accomplishment the team delivered for the advisor. */
+export interface AdvisorActivity {
+  id: string
+  date: string // YYYY-MM-DD
+  category: ActivityCategory
+  title: string
+  description?: string
+  /** Optional measurable outcome, e.g. "Appointments up 18%". */
+  impact?: string
+}
+
 /** Where an advisor's analytics come from. */
 export type AnalyticsSource = 'manual' | 'google_analytics'
 
@@ -99,6 +121,7 @@ export interface AdvisorAccount {
   content: AdvisorContent[]
   orders: AdvisorServiceOrder[]
   support: AdvisorSupportReq[]
+  activity: AdvisorActivity[]
 }
 
 export interface NewAdvisorInput {
@@ -124,6 +147,11 @@ interface AdvisorsValue {
     content: { title: string; channel: AdvisorContent['channel']; scheduledFor: string; body: string },
   ) => void
   removeContentFrom: (advisorId: string, contentId: string) => void
+  addActivityTo: (
+    advisorId: string,
+    activity: { date: string; category: ActivityCategory; title: string; description?: string; impact?: string },
+  ) => void
+  removeActivityFrom: (advisorId: string, activityId: string) => void
 }
 
 const AdvisorsContext = createContext<AdvisorsValue | null>(null)
@@ -136,7 +164,7 @@ const g = (_birthday?: string): Client['greetings'] => ({ birthday: true, holida
 
 const seedRaw: Omit<
   AdvisorAccount,
-  'reviewLink' | 'trafficSources' | 'keywords' | 'integration' | 'content' | 'orders' | 'support'
+  'reviewLink' | 'trafficSources' | 'keywords' | 'integration' | 'content' | 'orders' | 'support' | 'activity'
 >[] = [
   {
     id: 'adv-frazier',
@@ -270,6 +298,23 @@ const sampleKeywords = (id: string): AdvisorKeyword[] =>
         ]
       : []
 
+const sampleActivity = (id: string): AdvisorActivity[] =>
+  id === 'adv-frazier'
+    ? [
+        { id: 'ac-1', date: '2026-06-08', category: 'Content', title: 'Published "Mid-Year Market Check-In" on LinkedIn', impact: '2,400 impressions in 48 hours' },
+        { id: 'ac-2', date: '2026-06-03', category: 'SEO', title: 'Completed monthly SEO audit & fixed 6 meta descriptions', impact: 'SEO score +7 (now 78/100)' },
+        { id: 'ac-3', date: '2026-05-30', category: 'Website', title: 'Launched refreshed homepage with a booking CTA', impact: 'Appointments up 18% MoM' },
+        { id: 'ac-4', date: '2026-05-27', category: 'Print', title: 'Designed & shipped 1,000 seminar postcards', description: 'For the June retirement seminar.' },
+        { id: 'ac-5', date: '2026-05-20', category: 'Ads', title: 'Launched Google Ads campaign — retirement planning', impact: '112 new leads in 30 days' },
+        { id: 'ac-6', date: '2026-05-06', category: 'Strategy', title: 'Built and approved the Q2 content calendar', description: '12 posts across LinkedIn, Facebook & blog.' },
+      ]
+    : id === 'adv-cole'
+      ? [
+          { id: 'ac-7', date: '2026-06-01', category: 'Content', title: 'Drafted 4 tax-planning blog posts', impact: 'Scheduled through July' },
+          { id: 'ac-8', date: '2026-05-22', category: 'Website', title: 'Set up appointment booking on the site' },
+        ]
+      : []
+
 const seed: AdvisorAccount[] = seedRaw.map((a) => ({
   ...a,
   reviewLink: `/r/${slugify(a.firm)}`,
@@ -279,6 +324,7 @@ const seed: AdvisorAccount[] = seedRaw.map((a) => ({
   content: sampleContent(a.id),
   orders: sampleOrders(a.id),
   support: sampleSupport(a.id),
+  activity: sampleActivity(a.id),
 }))
 
 function load(): AdvisorAccount[] {
@@ -388,6 +434,7 @@ export function AdvisorsProvider({ children }: { children: ReactNode }) {
       content: [],
       orders: [],
       support: [],
+      activity: [],
     }
     setAdvisors((prev) => [advisor, ...prev])
     return advisor
@@ -455,9 +502,27 @@ export function AdvisorsProvider({ children }: { children: ReactNode }) {
     )
   }, [])
 
+  const addActivityTo: AdvisorsValue['addActivityTo'] = useCallback((advisorId, activity) => {
+    setAdvisors((prev) =>
+      prev.map((a) =>
+        a.id === advisorId
+          ? { ...a, activity: [{ ...activity, id: rid('ac-') }, ...a.activity] }
+          : a,
+      ),
+    )
+  }, [])
+
+  const removeActivityFrom = useCallback((advisorId: string, activityId: string) => {
+    setAdvisors((prev) =>
+      prev.map((a) =>
+        a.id === advisorId ? { ...a, activity: a.activity.filter((x) => x.id !== activityId) } : a,
+      ),
+    )
+  }, [])
+
   const value = useMemo<AdvisorsValue>(
-    () => ({ advisors, getAdvisor, addAdvisor, updateAdvisor, removeAdvisor, addClientTo, removeClientFrom, addContentTo, removeContentFrom }),
-    [advisors, getAdvisor, addAdvisor, updateAdvisor, removeAdvisor, addClientTo, removeClientFrom, addContentTo, removeContentFrom],
+    () => ({ advisors, getAdvisor, addAdvisor, updateAdvisor, removeAdvisor, addClientTo, removeClientFrom, addContentTo, removeContentFrom, addActivityTo, removeActivityFrom }),
+    [advisors, getAdvisor, addAdvisor, updateAdvisor, removeAdvisor, addClientTo, removeClientFrom, addContentTo, removeContentFrom, addActivityTo, removeActivityFrom],
   )
 
   return <AdvisorsContext.Provider value={value}>{children}</AdvisorsContext.Provider>
