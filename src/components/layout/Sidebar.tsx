@@ -1,7 +1,9 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import {
   Briefcase,
+  CalendarCheck,
   LayoutDashboard,
+  LifeBuoy,
   ListChecks,
   LogOut,
   UserCog,
@@ -40,6 +42,20 @@ const adminNav: AdminNavItem[] = [
     description: 'Profiles, content, clients',
     icon: Briefcase,
     isActive: (p) => p.startsWith('/admin/advisors'),
+  },
+  {
+    to: '/admin/content',
+    label: 'Content Pipeline',
+    description: 'Approved & scheduled posts',
+    icon: CalendarCheck,
+    isActive: (p) => p.startsWith('/admin/content'),
+  },
+  {
+    to: '/admin/support',
+    label: 'Support Inbox',
+    description: 'All advisor requests',
+    icon: LifeBuoy,
+    isActive: (p) => p.startsWith('/admin/support'),
   },
   {
     to: '/admin/progress',

@@ -137,6 +137,15 @@ export interface AdvisorAccount {
   support: AdvisorSupportReq[]
   activity: AdvisorActivity[]
   addons: AddonRequest[]
+  // Operations / onboarding (optional so older stored records still load)
+  siteStatus?: 'operational' | 'degraded' | 'down'
+  siteCheckedAt?: string
+  messagesSent?: number
+  onboarding?: {
+    agreementStatus: 'not_sent' | 'sent' | 'signed'
+    agreementSentOn?: string
+    meetingLink?: string
+  }
 }
 
 export interface NewAdvisorInput {
@@ -169,6 +178,7 @@ interface AdvisorsValue {
   removeActivityFrom: (advisorId: string, activityId: string) => void
   addAddonRequestTo: (advisorId: string, request: { serviceId: string; serviceName: string; note?: string }) => void
   setAddonStatus: (advisorId: string, requestId: string, status: AddonStatus, decisionNote?: string) => void
+  setSupportStatus: (advisorId: string, requestId: string, status: SupportReqStatus) => void
 }
 
 const AdvisorsContext = createContext<AdvisorsValue | null>(null)
@@ -353,6 +363,13 @@ const seed: AdvisorAccount[] = seedRaw.map((a) => ({
   support: sampleSupport(a.id),
   activity: sampleActivity(a.id),
   addons: sampleAddons(a.id),
+  siteStatus: (a.id === 'adv-beacon' ? 'degraded' : 'operational') as 'operational' | 'degraded' | 'down',
+  siteCheckedAt: '2026-06-08',
+  messagesSent: a.id === 'adv-frazier' ? 486 : a.id === 'adv-cole' ? 213 : a.id === 'adv-summit' ? 74 : 0,
+  onboarding: {
+    agreementStatus: (a.id === 'adv-frazier' || a.id === 'adv-cole' ? 'signed' : a.id === 'adv-summit' ? 'sent' : 'not_sent') as 'not_sent' | 'sent' | 'signed',
+    meetingLink: a.id === 'adv-frazier' ? 'https://cal.gohighlevel.com/onestop/frazier' : undefined,
+  },
 }))
 
 function load(): AdvisorAccount[] {
@@ -464,6 +481,9 @@ export function AdvisorsProvider({ children }: { children: ReactNode }) {
       support: [],
       activity: [],
       addons: [],
+      siteStatus: 'operational',
+      messagesSent: 0,
+      onboarding: { agreementStatus: 'not_sent' },
     }
     setAdvisors((prev) => [advisor, ...prev])
     return advisor
@@ -580,9 +600,19 @@ export function AdvisorsProvider({ children }: { children: ReactNode }) {
     )
   }, [])
 
+  const setSupportStatus: AdvisorsValue['setSupportStatus'] = useCallback((advisorId, requestId, status) => {
+    setAdvisors((prev) =>
+      prev.map((a) =>
+        a.id === advisorId
+          ? { ...a, support: a.support.map((s) => (s.id === requestId ? { ...s, status } : s)) }
+          : a,
+      ),
+    )
+  }, [])
+
   const value = useMemo<AdvisorsValue>(
-    () => ({ advisors, getAdvisor, addAdvisor, updateAdvisor, removeAdvisor, addClientTo, removeClientFrom, addContentTo, removeContentFrom, addActivityTo, removeActivityFrom, addAddonRequestTo, setAddonStatus }),
-    [advisors, getAdvisor, addAdvisor, updateAdvisor, removeAdvisor, addClientTo, removeClientFrom, addContentTo, removeContentFrom, addActivityTo, removeActivityFrom, addAddonRequestTo, setAddonStatus],
+    () => ({ advisors, getAdvisor, addAdvisor, updateAdvisor, removeAdvisor, addClientTo, removeClientFrom, addContentTo, removeContentFrom, addActivityTo, removeActivityFrom, addAddonRequestTo, setAddonStatus, setSupportStatus }),
+    [advisors, getAdvisor, addAdvisor, updateAdvisor, removeAdvisor, addClientTo, removeClientFrom, addContentTo, removeContentFrom, addActivityTo, removeActivityFrom, addAddonRequestTo, setAddonStatus, setSupportStatus],
   )
 
   return <AdvisorsContext.Provider value={value}>{children}</AdvisorsContext.Provider>

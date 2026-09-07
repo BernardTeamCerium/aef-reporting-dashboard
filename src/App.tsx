@@ -16,6 +16,8 @@ import { AdminProgress } from './pages/admin/Progress'
 import { AdminOverview } from './pages/admin/Overview'
 import { AdminAdvisors } from './pages/admin/Advisors'
 import { AdvisorDetail } from './pages/admin/AdvisorDetail'
+import { AdminSupport } from './pages/admin/Support'
+import { AdminContent } from './pages/admin/Content'
 import { useAuth } from './state/Auth'
 
 /** Admins land in the management console; advisors land on their own dashboard. */
@@ -44,6 +46,8 @@ export default function App() {
             <Route path="/admin" element={<AdminOverview />} />
             <Route path="/admin/advisors" element={<AdminAdvisors />} />
             <Route path="/admin/advisors/:id" element={<AdvisorDetail />} />
+            <Route path="/admin/content" element={<AdminContent />} />
+            <Route path="/admin/support" element={<AdminSupport />} />
             <Route path="/admin/progress" element={<AdminProgress />} />
             <Route path="/admin/users" element={<AdminUsers />} />
           </Route>
