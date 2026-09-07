@@ -20,6 +20,8 @@ export function Topbar({ onOpenMenu }: TopbarProps) {
   const adminTitle = (() => {
     if (/^\/admin\/advisors\/.+/.test(pathname)) return { label: 'Advisor', description: 'Manage this advisor' }
     if (pathname.startsWith('/admin/advisors')) return { label: 'Advisors', description: 'Manage advisors & their clients' }
+    if (pathname.startsWith('/admin/content')) return { label: 'Content Pipeline', description: 'Approved & scheduled posts across advisors' }
+    if (pathname.startsWith('/admin/support')) return { label: 'Support Inbox', description: 'All advisor support requests' }
     if (pathname.startsWith('/admin/progress')) return { label: 'Service Progress', description: 'Track tasks delivered for clients' }
     if (pathname.startsWith('/admin/users')) return { label: 'Team & Access', description: 'Login accounts & roles' }
     if (pathname === '/admin') return { label: 'Overview', description: 'Activity across all advisors' }

@@ -35,12 +35,13 @@ import {
 } from '../../state/Advisors'
 import { useNotify } from '../../state/Notifications'
 import { AdvisorAnalytics } from './AdvisorAnalytics'
+import { AdvisorOnboarding } from './AdvisorOnboarding'
 import { ActivityTimeline } from '../../components/advisor/ActivityTimeline'
 import { addonStatusMeta } from '../../lib/status'
 import { initialsOf } from '../../lib/reviewsUtil'
 import { formatCurrency, formatDate, cx } from '../../lib/format'
 
-type Tab = 'overview' | 'activity' | 'analytics' | 'content' | 'orders' | 'support' | 'addons' | 'clients' | 'reviews'
+type Tab = 'overview' | 'onboarding' | 'activity' | 'analytics' | 'content' | 'orders' | 'support' | 'addons' | 'clients' | 'reviews'
 
 const contentStatusMeta: Record<AdvisorContent['status'], { label: string; tone: BadgeTone }> = {
   pending: { label: 'Awaiting approval', tone: 'amber' },
@@ -78,6 +79,7 @@ export function AdvisorDetail() {
 
   const tabs: { key: Tab; label: string }[] = [
     { key: 'overview', label: 'Overview' },
+    { key: 'onboarding', label: 'Onboarding' },
     { key: 'activity', label: `Activity Log (${advisor.activity.length})` },
     { key: 'analytics', label: 'Analytics' },
     { key: 'content', label: `Content${pendingContent ? ` (${pendingContent})` : ''}` },
@@ -224,6 +226,8 @@ export function AdvisorDetail() {
           </div>
         </Card>
       )}
+
+      {tab === 'onboarding' && <AdvisorOnboarding advisor={advisor} />}
 
       {tab === 'analytics' && <AdvisorAnalytics advisor={advisor} />}
 
