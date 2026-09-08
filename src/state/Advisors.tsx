@@ -164,6 +164,13 @@ export interface AdvisorAccount {
     agreementStatus: 'not_sent' | 'sent' | 'signed'
     agreementSentOn?: string
     meetingLink?: string
+    // Sequential onboarding steps
+    welcomeSentOn?: string
+    questionnaireStatus?: 'not_sent' | 'sent' | 'completed'
+    questionnaireSentOn?: string
+    bio?: string
+    meetingBooked?: boolean
+    activatedOn?: string
   }
 }
 
@@ -409,6 +416,17 @@ const seed: AdvisorAccount[] = seedRaw.map((a) => ({
   onboarding: {
     agreementStatus: (a.id === 'adv-frazier' || a.id === 'adv-cole' ? 'signed' : a.id === 'adv-summit' ? 'sent' : 'not_sent') as 'not_sent' | 'sent' | 'signed',
     meetingLink: a.id === 'adv-frazier' ? 'https://cal.gohighlevel.com/onestop/frazier' : undefined,
+    welcomeSentOn: a.id === 'adv-frazier' || a.id === 'adv-cole' || a.id === 'adv-summit' ? '2026-04-01' : undefined,
+    questionnaireStatus: (a.id === 'adv-frazier' || a.id === 'adv-cole' ? 'completed' : a.id === 'adv-summit' ? 'sent' : 'not_sent') as 'not_sent' | 'sent' | 'completed',
+    questionnaireSentOn: a.id === 'adv-frazier' || a.id === 'adv-cole' || a.id === 'adv-summit' ? '2026-04-02' : undefined,
+    bio:
+      a.id === 'adv-frazier'
+        ? 'Frazier Wealth Management helps pre-retirees and business owners build tax-efficient retirement income plans. Fee-only fiduciary, CFP®, 18 years of experience.'
+        : a.id === 'adv-cole'
+          ? 'Cole Financial Group specializes in comprehensive financial planning for physicians and dental professionals across the Southeast.'
+          : undefined,
+    meetingBooked: a.id === 'adv-frazier' || a.id === 'adv-cole' ? true : false,
+    activatedOn: a.id === 'adv-frazier' || a.id === 'adv-cole' ? '2026-04-08' : undefined,
   },
 }))
 
