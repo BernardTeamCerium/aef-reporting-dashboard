@@ -90,6 +90,19 @@ export interface AdvisorActivity {
   impact?: string
 }
 
+export type Affiliation = 'aef' | 'independent'
+
+export type BillingStatus = 'paid' | 'due' | 'covered'
+export interface BillingItem {
+  id: string
+  item: string
+  amount: number
+  period: string // 'YYYY-MM'
+  status: BillingStatus
+  createdOn: string
+  paidOn?: string
+}
+
 export type AddonStatus = 'requested' | 'invoiced' | 'covered' | 'active' | 'declined'
 
 /** An advisor's request to purchase / add an additional service. */
@@ -137,6 +150,10 @@ export interface AdvisorAccount {
   support: AdvisorSupportReq[]
   activity: AdvisorActivity[]
   addons: AddonRequest[]
+  // Billing: whether the advisor's company (Allied Elite Financial) covers it,
+  // and their invoice ledger. Optional so older stored records still load.
+  affiliation?: Affiliation
+  billing?: BillingItem[]
   // Premium feature entitlements (unlocked features). Optional; default locked.
   features?: Record<string, boolean>
   // Operations / onboarding (optional so older stored records still load)
@@ -182,6 +199,8 @@ interface AdvisorsValue {
   setAddonStatus: (advisorId: string, requestId: string, status: AddonStatus, decisionNote?: string) => void
   setSupportStatus: (advisorId: string, requestId: string, status: SupportReqStatus) => void
   setFeature: (advisorId: string, featureId: string, enabled: boolean) => void
+  addInvoice: (advisorId: string, invoice: { item: string; amount: number; period: string; status: BillingStatus }) => void
+  setInvoiceStatus: (advisorId: string, invoiceId: string, status: BillingStatus) => void
 }
 
 const AdvisorsContext = createContext<AdvisorsValue | null>(null)
@@ -355,6 +374,17 @@ const sampleAddons = (id: string): AddonRequest[] =>
       ? [{ id: 'ad-3', serviceId: 'ads', serviceName: 'Search & Service Ads (Google Ads)', requestedOn: '2026-06-06', status: 'requested' }]
       : []
 
+const curPeriod = new Date().toISOString().slice(0, 7)
+const sampleBilling = (id: string): BillingItem[] =>
+  id === 'adv-frazier'
+    ? [
+        { id: 'bi-1', item: 'SEO & Keywords', amount: 149, period: curPeriod, status: 'covered', createdOn: `${curPeriod}-01` },
+        { id: 'bi-2', item: 'Review Management', amount: 99, period: curPeriod, status: 'covered', createdOn: `${curPeriod}-01` },
+      ]
+    : id === 'adv-cole'
+      ? [{ id: 'bi-3', item: 'Review Management', amount: 99, period: curPeriod, status: 'covered', createdOn: `${curPeriod}-01` }]
+      : []
+
 const seed: AdvisorAccount[] = seedRaw.map((a) => ({
   ...a,
   reviewLink: `/r/${slugify(a.firm)}`,
@@ -366,6 +396,8 @@ const seed: AdvisorAccount[] = seedRaw.map((a) => ({
   support: sampleSupport(a.id),
   activity: sampleActivity(a.id),
   addons: sampleAddons(a.id),
+  affiliation: (a.id === 'adv-frazier' || a.id === 'adv-cole' ? 'aef' : 'independent') as Affiliation,
+  billing: sampleBilling(a.id),
   features: (a.id === 'adv-frazier'
     ? { seo: true, reviews: true, greetings: false, newsletter: false }
     : a.id === 'adv-cole'
@@ -489,6 +521,8 @@ export function AdvisorsProvider({ children }: { children: ReactNode }) {
       support: [],
       activity: [],
       addons: [],
+      affiliation: 'independent',
+      billing: [],
       features: {},
       siteStatus: 'operational',
       messagesSent: 0,
@@ -627,9 +661,40 @@ export function AdvisorsProvider({ children }: { children: ReactNode }) {
     )
   }, [])
 
+  const addInvoice: AdvisorsValue['addInvoice'] = useCallback((advisorId, invoice) => {
+    setAdvisors((prev) =>
+      prev.map((a) =>
+        a.id === advisorId
+          ? {
+              ...a,
+              billing: [
+                { ...invoice, id: rid('bi-'), createdOn: todayIso(), paidOn: invoice.status === 'paid' ? todayIso() : undefined },
+                ...(a.billing ?? []),
+              ],
+            }
+          : a,
+      ),
+    )
+  }, [])
+
+  const setInvoiceStatus: AdvisorsValue['setInvoiceStatus'] = useCallback((advisorId, invoiceId, status) => {
+    setAdvisors((prev) =>
+      prev.map((a) =>
+        a.id === advisorId
+          ? {
+              ...a,
+              billing: (a.billing ?? []).map((b) =>
+                b.id === invoiceId ? { ...b, status, paidOn: status === 'paid' ? todayIso() : b.paidOn } : b,
+              ),
+            }
+          : a,
+      ),
+    )
+  }, [])
+
   const value = useMemo<AdvisorsValue>(
-    () => ({ advisors, getAdvisor, addAdvisor, updateAdvisor, removeAdvisor, addClientTo, removeClientFrom, addContentTo, removeContentFrom, addActivityTo, removeActivityFrom, addAddonRequestTo, setAddonStatus, setSupportStatus, setFeature }),
-    [advisors, getAdvisor, addAdvisor, updateAdvisor, removeAdvisor, addClientTo, removeClientFrom, addContentTo, removeContentFrom, addActivityTo, removeActivityFrom, addAddonRequestTo, setAddonStatus, setSupportStatus, setFeature],
+    () => ({ advisors, getAdvisor, addAdvisor, updateAdvisor, removeAdvisor, addClientTo, removeClientFrom, addContentTo, removeContentFrom, addActivityTo, removeActivityFrom, addAddonRequestTo, setAddonStatus, setSupportStatus, setFeature, addInvoice, setInvoiceStatus }),
+    [advisors, getAdvisor, addAdvisor, updateAdvisor, removeAdvisor, addClientTo, removeClientFrom, addContentTo, removeContentFrom, addActivityTo, removeActivityFrom, addAddonRequestTo, setAddonStatus, setSupportStatus, setFeature, addInvoice, setInvoiceStatus],
   )
 
   return <AdvisorsContext.Provider value={value}>{children}</AdvisorsContext.Provider>
