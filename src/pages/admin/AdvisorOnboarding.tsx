@@ -16,7 +16,8 @@ import { Button } from '../../components/ui/Button'
 import { useToast } from '../../components/ui/Toast'
 import { useAdvisors, type AdvisorAccount } from '../../state/Advisors'
 import { useAuth } from '../../state/Auth'
-import { formatDate } from '../../lib/format'
+import { GATED_FEATURES, hasFeature } from '../../data/features'
+import { formatCurrency, formatDate, cx } from '../../lib/format'
 
 const inputCls =
   'w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100'
@@ -33,7 +34,7 @@ const siteMeta: Record<'operational' | 'degraded' | 'down', { label: string; ton
 }
 
 export function AdvisorOnboarding({ advisor }: { advisor: AdvisorAccount }) {
-  const { updateAdvisor } = useAdvisors()
+  const { updateAdvisor, setFeature } = useAdvisors()
   const { demoMode, getAccessToken } = useAuth()
   const notify = useToast()
   const [sending, setSending] = useState(false)
@@ -148,6 +149,33 @@ export function AdvisorOnboarding({ advisor }: { advisor: AdvisorAccount }) {
           </div>
         </Card>
       </div>
+
+      {/* Feature access — admin toggles */}
+      <Card>
+        <CardHeader title="Feature access" subtitle="Turn premium features on or off for this advisor" icon={<Signal size={18} />} />
+        <div className="divide-y divide-slate-100">
+          {GATED_FEATURES.map((f) => {
+            const on = hasFeature(advisor, f.id)
+            return (
+              <div key={f.id} className="flex items-center justify-between gap-3 px-5 py-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-slate-800">{f.name}</p>
+                  <p className="text-xs text-slate-500">{formatCurrency(f.monthlyCost)}/mo · {f.description}</p>
+                </div>
+                <button
+                  role="switch"
+                  aria-checked={on}
+                  aria-label={`${on ? 'Disable' : 'Enable'} ${f.name}`}
+                  onClick={() => setFeature(advisor.id, f.id, !on)}
+                  className={cx('relative h-6 w-11 shrink-0 rounded-full transition-colors', on ? 'bg-brand-600' : 'bg-slate-300')}
+                >
+                  <span className={cx('absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform', on && 'translate-x-5')} />
+                </button>
+              </div>
+            )
+          })}
+        </div>
+      </Card>
     </div>
   )
 }

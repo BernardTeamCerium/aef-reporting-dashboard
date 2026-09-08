@@ -2,6 +2,7 @@ import {
   CalendarCheck,
   LayoutDashboard,
   LifeBuoy,
+  Mail,
   Printer,
   Sparkles,
   Star,
@@ -47,6 +48,12 @@ export const navItems: NavItem[] = [
     label: 'Clients',
     icon: Users,
     description: 'Profiles, birthdays & greetings',
+  },
+  {
+    to: '/newsletter',
+    label: 'Newsletter',
+    icon: Mail,
+    description: 'Mass email your clients',
   },
   {
     to: '/services',

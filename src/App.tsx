@@ -10,6 +10,8 @@ import { Login } from './pages/Login'
 import { Reviews } from './pages/Reviews'
 import { Clients } from './pages/Clients'
 import { Services } from './pages/Services'
+import { Newsletter } from './pages/Newsletter'
+import { FeatureGate } from './components/FeatureGate'
 import { ReviewCollect } from './pages/public/ReviewCollect'
 import { AdminUsers } from './pages/admin/Users'
 import { AdminProgress } from './pages/admin/Progress'
@@ -37,10 +39,11 @@ export default function App() {
           <Route index element={<RoleHome />} />
           <Route path="/content" element={<ContentApprovals />} />
           <Route path="/print" element={<PrintOrders />} />
-          <Route path="/reviews" element={<Reviews />} />
+          <Route path="/reviews" element={<FeatureGate featureId="reviews"><Reviews /></FeatureGate>} />
           <Route path="/clients" element={<Clients />} />
           <Route path="/services" element={<Services />} />
-          <Route path="/seo" element={<Seo />} />
+          <Route path="/newsletter" element={<FeatureGate featureId="newsletter"><Newsletter /></FeatureGate>} />
+          <Route path="/seo" element={<FeatureGate featureId="seo"><Seo /></FeatureGate>} />
           <Route path="/support" element={<Support />} />
           <Route element={<RequireAdmin />}>
             <Route path="/admin" element={<AdminOverview />} />

@@ -137,6 +137,8 @@ export interface AdvisorAccount {
   support: AdvisorSupportReq[]
   activity: AdvisorActivity[]
   addons: AddonRequest[]
+  // Premium feature entitlements (unlocked features). Optional; default locked.
+  features?: Record<string, boolean>
   // Operations / onboarding (optional so older stored records still load)
   siteStatus?: 'operational' | 'degraded' | 'down'
   siteCheckedAt?: string
@@ -179,6 +181,7 @@ interface AdvisorsValue {
   addAddonRequestTo: (advisorId: string, request: { serviceId: string; serviceName: string; note?: string }) => void
   setAddonStatus: (advisorId: string, requestId: string, status: AddonStatus, decisionNote?: string) => void
   setSupportStatus: (advisorId: string, requestId: string, status: SupportReqStatus) => void
+  setFeature: (advisorId: string, featureId: string, enabled: boolean) => void
 }
 
 const AdvisorsContext = createContext<AdvisorsValue | null>(null)
@@ -363,6 +366,11 @@ const seed: AdvisorAccount[] = seedRaw.map((a) => ({
   support: sampleSupport(a.id),
   activity: sampleActivity(a.id),
   addons: sampleAddons(a.id),
+  features: (a.id === 'adv-frazier'
+    ? { seo: true, reviews: true, greetings: false, newsletter: false }
+    : a.id === 'adv-cole'
+      ? { seo: false, reviews: true, greetings: false, newsletter: false }
+      : {}) as Record<string, boolean>,
   siteStatus: (a.id === 'adv-beacon' ? 'degraded' : 'operational') as 'operational' | 'degraded' | 'down',
   siteCheckedAt: '2026-06-08',
   messagesSent: a.id === 'adv-frazier' ? 486 : a.id === 'adv-cole' ? 213 : a.id === 'adv-summit' ? 74 : 0,
@@ -481,6 +489,7 @@ export function AdvisorsProvider({ children }: { children: ReactNode }) {
       support: [],
       activity: [],
       addons: [],
+      features: {},
       siteStatus: 'operational',
       messagesSent: 0,
       onboarding: { agreementStatus: 'not_sent' },
@@ -610,9 +619,17 @@ export function AdvisorsProvider({ children }: { children: ReactNode }) {
     )
   }, [])
 
+  const setFeature: AdvisorsValue['setFeature'] = useCallback((advisorId, featureId, enabled) => {
+    setAdvisors((prev) =>
+      prev.map((a) =>
+        a.id === advisorId ? { ...a, features: { ...a.features, [featureId]: enabled } } : a,
+      ),
+    )
+  }, [])
+
   const value = useMemo<AdvisorsValue>(
-    () => ({ advisors, getAdvisor, addAdvisor, updateAdvisor, removeAdvisor, addClientTo, removeClientFrom, addContentTo, removeContentFrom, addActivityTo, removeActivityFrom, addAddonRequestTo, setAddonStatus, setSupportStatus }),
-    [advisors, getAdvisor, addAdvisor, updateAdvisor, removeAdvisor, addClientTo, removeClientFrom, addContentTo, removeContentFrom, addActivityTo, removeActivityFrom, addAddonRequestTo, setAddonStatus, setSupportStatus],
+    () => ({ advisors, getAdvisor, addAdvisor, updateAdvisor, removeAdvisor, addClientTo, removeClientFrom, addContentTo, removeContentFrom, addActivityTo, removeActivityFrom, addAddonRequestTo, setAddonStatus, setSupportStatus, setFeature }),
+    [advisors, getAdvisor, addAdvisor, updateAdvisor, removeAdvisor, addClientTo, removeClientFrom, addContentTo, removeContentFrom, addActivityTo, removeActivityFrom, addAddonRequestTo, setAddonStatus, setSupportStatus, setFeature],
   )
 
   return <AdvisorsContext.Provider value={value}>{children}</AdvisorsContext.Provider>
