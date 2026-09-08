@@ -11,6 +11,7 @@ import { Reviews } from './pages/Reviews'
 import { Clients } from './pages/Clients'
 import { Services } from './pages/Services'
 import { Newsletter } from './pages/Newsletter'
+import { Billing } from './pages/Billing'
 import { FeatureGate } from './components/FeatureGate'
 import { ReviewCollect } from './pages/public/ReviewCollect'
 import { AdminUsers } from './pages/admin/Users'
@@ -42,6 +43,7 @@ export default function App() {
           <Route path="/reviews" element={<FeatureGate featureId="reviews"><Reviews /></FeatureGate>} />
           <Route path="/clients" element={<Clients />} />
           <Route path="/services" element={<Services />} />
+          <Route path="/billing" element={<Billing />} />
           <Route path="/newsletter" element={<FeatureGate featureId="newsletter"><Newsletter /></FeatureGate>} />
           <Route path="/seo" element={<FeatureGate featureId="seo"><Seo /></FeatureGate>} />
           <Route path="/support" element={<Support />} />

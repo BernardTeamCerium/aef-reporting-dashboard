@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   CalendarCheck,
   Copy,
+  CreditCard,
   ExternalLink,
   Gauge,
   LifeBuoy,
@@ -12,6 +13,7 @@ import {
   Package,
   Phone,
   Plus,
+  ShieldCheck,
   Sparkles,
   Star,
   Trash2,
@@ -32,6 +34,8 @@ import {
   type ActivityCategory,
   type AddonRequest,
   type AddonStatus,
+  type Affiliation,
+  type BillingStatus,
 } from '../../state/Advisors'
 import { useNotify } from '../../state/Notifications'
 import { AdvisorAnalytics } from './AdvisorAnalytics'
@@ -41,7 +45,13 @@ import { addonStatusMeta } from '../../lib/status'
 import { initialsOf } from '../../lib/reviewsUtil'
 import { formatCurrency, formatDate, cx } from '../../lib/format'
 
-type Tab = 'overview' | 'onboarding' | 'activity' | 'analytics' | 'content' | 'orders' | 'support' | 'addons' | 'clients' | 'reviews'
+type Tab = 'overview' | 'onboarding' | 'activity' | 'analytics' | 'content' | 'orders' | 'support' | 'addons' | 'clients' | 'reviews' | 'billing'
+
+const billingStatusMeta: Record<BillingStatus, { label: string; tone: BadgeTone }> = {
+  paid: { label: 'Paid', tone: 'green' },
+  due: { label: 'Due', tone: 'amber' },
+  covered: { label: 'Covered', tone: 'blue' },
+}
 
 const contentStatusMeta: Record<AdvisorContent['status'], { label: string; tone: BadgeTone }> = {
   pending: { label: 'Awaiting approval', tone: 'amber' },
@@ -53,7 +63,7 @@ const origin = typeof window !== 'undefined' ? window.location.origin : ''
 
 export function AdvisorDetail() {
   const { id = '' } = useParams()
-  const { getAdvisor, addClientTo, removeClientFrom, addContentTo, removeContentFrom, addActivityTo, removeActivityFrom, setAddonStatus } = useAdvisors()
+  const { getAdvisor, addClientTo, removeClientFrom, addContentTo, removeContentFrom, addActivityTo, removeActivityFrom, setAddonStatus, updateAdvisor, addInvoice, setInvoiceStatus } = useAdvisors()
   const notify = useToast()
   const pushNotify = useNotify()
   const advisor = getAdvisor(id)
@@ -62,6 +72,7 @@ export function AdvisorDetail() {
   const [uploadOpen, setUploadOpen] = useState(false)
   const [logOpen, setLogOpen] = useState(false)
   const [respondReq, setRespondReq] = useState<AddonRequest | null>(null)
+  const [invoiceOpen, setInvoiceOpen] = useState(false)
 
   if (!advisor) {
     return (
@@ -88,7 +99,13 @@ export function AdvisorDetail() {
     { key: 'addons', label: `Add-ons${pendingAddons ? ` (${pendingAddons})` : ''}` },
     { key: 'clients', label: `Clients (${advisor.clients.length})` },
     { key: 'reviews', label: `Reviews (${advisor.reviews.length})` },
+    { key: 'billing', label: 'Billing' },
   ]
+
+  const billing = [...(advisor.billing ?? [])].sort((a, b) => b.period.localeCompare(a.period))
+  const monthlyTotal = billing
+    .filter((b) => b.period === new Date().toISOString().slice(0, 7))
+    .reduce((sum, b) => sum + b.amount, 0)
 
   const maxTraffic = Math.max(1, ...advisor.trafficSources.map((t) => t.visitors))
 
@@ -414,6 +431,97 @@ export function AdvisorDetail() {
         </div>
       )}
 
+      {tab === 'billing' && (
+        <div className="space-y-4">
+          {/* Affiliation control */}
+          <Card>
+            <CardHeader
+              title="Affiliation"
+              subtitle="Controls whether services are covered by Allied Elite Financial or billed to the advisor via Stripe"
+              icon={<ShieldCheck size={18} />}
+            />
+            <div className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-slate-600">
+                {advisor.affiliation === 'aef'
+                  ? 'This advisor is with Allied Elite Financial — their services are shown as company-covered.'
+                  : 'This advisor is independent — they pay for premium features through Stripe.'}
+              </p>
+              <div className="flex rounded-lg bg-slate-100 p-1">
+                {(['aef', 'independent'] as Affiliation[]).map((aff) => (
+                  <button
+                    key={aff}
+                    onClick={() => { updateAdvisor(advisor.id, { affiliation: aff }); notify('Affiliation updated.') }}
+                    className={cx(
+                      'rounded-md px-3 py-1.5 text-xs font-semibold transition-colors',
+                      advisor.affiliation === aff ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700',
+                    )}
+                  >
+                    {aff === 'aef' ? 'Allied Elite Financial' : 'Independent'}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </Card>
+
+          {/* Ledger */}
+          <Card>
+            <CardHeader
+              title="Invoices"
+              subtitle={`${formatCurrency(monthlyTotal)} billed this month`}
+              icon={<CreditCard size={18} />}
+              action={<Button size="sm" onClick={() => setInvoiceOpen(true)}><Plus size={14} /> Post invoice</Button>}
+            />
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-100 text-left text-xs uppercase tracking-wide text-slate-400">
+                    <th className="px-5 py-3 font-medium">Service</th>
+                    <th className="px-5 py-3 font-medium">Period</th>
+                    <th className="px-5 py-3 font-medium">Amount</th>
+                    <th className="px-5 py-3 font-medium">Status</th>
+                    <th className="px-5 py-3" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {billing.map((b) => {
+                    const meta = billingStatusMeta[b.status]
+                    return (
+                      <tr key={b.id} className="hover:bg-slate-50">
+                        <td className="px-5 py-3 font-medium text-slate-800">{b.item}</td>
+                        <td className="px-5 py-3 text-slate-500">{b.period}</td>
+                        <td className="px-5 py-3 text-slate-700">{formatCurrency(b.amount)}</td>
+                        <td className="px-5 py-3"><Badge tone={meta.tone}>{meta.label}</Badge></td>
+                        <td className="px-5 py-3 text-right">
+                          <select
+                            value={b.status}
+                            onChange={(e) => { setInvoiceStatus(advisor.id, b.id, e.target.value as BillingStatus); notify('Invoice updated.') }}
+                            className="rounded-lg border border-slate-300 px-2 py-1 text-xs outline-none focus:border-brand-500"
+                          >
+                            <option value="due">Due</option>
+                            <option value="paid">Paid</option>
+                            <option value="covered">Covered</option>
+                          </select>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                  {billing.length === 0 && (
+                    <tr><td colSpan={5} className="px-5 py-10 text-center text-sm text-slate-400">No invoices posted yet.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      <PostInvoiceModal
+        open={invoiceOpen}
+        defaultStatus={advisor.affiliation === 'aef' ? 'covered' : 'due'}
+        onClose={() => setInvoiceOpen(false)}
+        onAdd={(input) => { addInvoice(advisor.id, input); notify('Invoice posted.') }}
+      />
+
       <AddClientModal
         open={addClientOpen}
         onClose={() => setAddClientOpen(false)}
@@ -684,6 +792,71 @@ function UploadContentModal({
         <label className="block">
           <span className="mb-1 block text-sm font-medium text-slate-700">Content</span>
           <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={5} placeholder="Write the post copy…" className={cx(inputCls, 'resize-none')} />
+        </label>
+        {err && <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700">{err}</p>}
+      </div>
+    </Modal>
+  )
+}
+
+function PostInvoiceModal({
+  open,
+  defaultStatus,
+  onClose,
+  onAdd,
+}: {
+  open: boolean
+  defaultStatus: BillingStatus
+  onClose: () => void
+  onAdd: (input: { item: string; amount: number; period: string; status: BillingStatus }) => void
+}) {
+  const thisPeriod = new Date().toISOString().slice(0, 7)
+  const [item, setItem] = useState('')
+  const [amount, setAmount] = useState('')
+  const [period, setPeriod] = useState(thisPeriod)
+  const [status, setStatus] = useState<BillingStatus>(defaultStatus)
+  const [err, setErr] = useState<string | null>(null)
+
+  useEffect(() => { if (open) setStatus(defaultStatus) }, [open, defaultStatus])
+
+  const submit = () => {
+    const amt = Number(amount)
+    if (!item.trim() || !amt || amt <= 0) { setErr('Enter a service name and a positive amount.'); return }
+    onAdd({ item: item.trim(), amount: amt, period: period || thisPeriod, status })
+    setItem(''); setAmount(''); setPeriod(thisPeriod); setErr(null)
+    onClose()
+  }
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Post invoice"
+      subtitle="Add a billing line to this advisor's ledger."
+      footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button onClick={submit}><Plus size={16} /> Post invoice</Button></>}
+    >
+      <div className="space-y-4">
+        <label className="block">
+          <span className="mb-1 block text-sm font-medium text-slate-700">Service / description</span>
+          <input value={item} onChange={(e) => setItem(e.target.value)} placeholder="e.g. SEO & Keywords" className={inputCls} />
+        </label>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <label className="block">
+            <span className="mb-1 block text-sm font-medium text-slate-700">Amount (USD)</span>
+            <input type="number" min="0" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="149" className={inputCls} />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-sm font-medium text-slate-700">Period</span>
+            <input type="month" value={period} onChange={(e) => setPeriod(e.target.value)} className={inputCls} />
+          </label>
+        </div>
+        <label className="block">
+          <span className="mb-1 block text-sm font-medium text-slate-700">Status</span>
+          <select value={status} onChange={(e) => setStatus(e.target.value as BillingStatus)} className={inputCls}>
+            <option value="due">Due — advisor pays via Stripe</option>
+            <option value="covered">Covered — by Allied Elite Financial</option>
+            <option value="paid">Paid — already settled</option>
+          </select>
         </label>
         {err && <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700">{err}</p>}
       </div>

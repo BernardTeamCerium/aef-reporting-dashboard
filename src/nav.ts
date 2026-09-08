@@ -4,6 +4,7 @@ import {
   LifeBuoy,
   Mail,
   Printer,
+  Receipt,
   Sparkles,
   Star,
   TrendingUp,
@@ -60,6 +61,12 @@ export const navItems: NavItem[] = [
     label: 'Add-on Services',
     icon: Sparkles,
     description: 'Request additional services',
+  },
+  {
+    to: '/billing',
+    label: 'Billing',
+    icon: Receipt,
+    description: 'Invoices & subscriptions',
   },
   {
     to: '/seo',
