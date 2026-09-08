@@ -18,6 +18,7 @@ import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
 import { useToast } from '../components/ui/Toast'
 import { RequestReviewModal } from '../components/reviews/RequestReviewModal'
+import { FeatureSection } from '../components/FeatureGate'
 import { useClients, type Client } from '../state/Clients'
 import {
   initialsOf,
@@ -57,7 +58,8 @@ export function Clients() {
         </div>
       </div>
 
-      {/* Upcoming automated greetings */}
+      {/* Upcoming automated greetings — gated premium feature */}
+      <FeatureSection featureId="greetings">
       <Card>
         <CardHeader
           title="Automated greetings"
@@ -113,6 +115,7 @@ export function Clients() {
           automatically — the schedule shown here is what would go out.
         </p>
       </Card>
+      </FeatureSection>
 
       {/* Clients table */}
       <Card>
